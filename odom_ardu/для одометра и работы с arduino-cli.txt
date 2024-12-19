@@ -1,0 +1,53 @@
+Запуск одометрического устройства и визуализация в rviz
+    1) roscore
+    2) rosrun tf static_transform_publisher 0 0 0 0 0 0 map robot 1000
+    3) rviz
+    4) rosrun rosserial_python serial_node.py 
+
+Прошивка arduino:
+    1) arduino-cli compile  --fqbn arduino:avr:mega:cpu=atmega2560 odometry_test.ino 
+    2) arduino-cli upload -p /dev/ttyUSB0 --fqbn arduino:avr:mega:cpu=atmega2560 odometry_test.ino 
+
+
+
+
+Изменения в ros.h (ros_lib в arduino/libraries):
+    typedef NodeHandle_<ArduinoHardware, 2, 2, 512, 2048> NodeHandle; // изменяем параметры количества подписчиков/паблишеров и размеры буфферов
+
+Изменения в arduino/libraries/ros_lib/ros/node_handle.h (НУЖНО обязательно поправить и этот файл в соответствие с ros.h):
+    template<class Hardware,
+            int MAX_SUBSCRIBERS = 2,
+            int MAX_PUBLISHERS = 2,
+            int INPUT_SIZE = 2048,
+            int OUTPUT_SIZE = 512>
+
+--> ТО ЕСТЬ нужно увеличить размер буфферов и уменьшить количество подписчиков/паблишеров, чтобы оптимизировать использование памяти МК прошивки с rosserial
+
+
+
+
+
+
+
+
+Состав arduino-cli.yaml:
+board_manager:
+    additional_urls: 
+        - https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
+directories:
+    builtin:
+        libraries: ~/arduino/libraries
+    user: ~/arduino_sketches
+
+
+
+
+
+Команды для настройки arduino-cli (В ПРОИЗВОЛЬНОМ ПОРЯДКЕ):
+    1) arduino-cli config init
+    2) arduino-cli config dump -v
+    3) arduino-cli core update-index
+    4) arduino-cli board list
+    5) rosrun rosserial_arduino make_libraries.py ~/arduino/libraries
+    6) arduino-cli core install arduino:avr
+    7) arduino-cli board details -b arduino:avr:mega

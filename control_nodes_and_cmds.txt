@@ -1,0 +1,8 @@
+rosrun rosserial_python serial_node.py 
+rosrun sisyph_control joy_cmd_process.py
+rosrun joy joy_node
+
+roslaunch sisyph_control joy_control.launch
+
+arduino-cli compile  --fqbn arduino:avr:mega:cpu=atmega2560 sisyph_ardu.ino 
+arduino-cli upload -p /dev/ttyUSB0 --fqbn arduino:avr:mega:cpu=atmega2560 sisyph_ardu.ino 
