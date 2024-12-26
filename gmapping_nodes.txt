@@ -1,32 +1,23 @@
-rosmake gmapping
-roscore
-
-rosrun urg_node urg_node _ip_address:=192.168.0.10
 
 rosparam set use_sim_time false
-
-rosrun tf static_transform_publisher 0 0 0 0 0 0 map base_link 100
-rosrun tf static_transform_publisher 0 0 0 0 0 0 base_link usb_cam 100
-rosrun tf static_transform_publisher 0 0 0.5 -1.57 0 -1.57 usb_cam laser 100
-
-rosrun gmapping slam_gmapping scan:=/scan _base_frame:=laser _odom_frame:=laser _linearUpdate:=0.0 _angularUpdate:=0.0
-
-rosrun rviz rviz
-
 
 
 
 
 
 Run gmapping + aruco + tfs + lidar:
-roscore
-roslaunch sisyph_slam aruco.launch
-rosrun sisyph_slam fid_to_tf.py
-rosrun tf static_transform_publisher 0 0 0 0 0 0 map usb_cam 100
-rosrun tf static_transform_publisher 0 0 0 0 0 0 odom base_link 100
-rosrun tf static_transform_publisher 0 0 0 0 0 0  base_link laser 100
-rosrun urg_node urg_node _ip_address:=192.168.0.10 _angle_min:=-1 _angle_max:=1 
-rosrun gmapping slam_gmapping scan:=/scan _base_frame:=base_link _odom_frame:=odom _linearUpdate:=0.0 _angularUpdate:=0.0
 
+on inspiron:
+	roscore
+	roslaunch sisyph_control joy_control.launch
+	rosrun urg_node urg_node _ip_address:=192.168.0.10 _angle_min:=-1 _angle_max:=1 
 
+on u102:
+	roslaunch sisyph_slam aruco.launch
+	roslaunch sisyph_slam aruco.launch
+	rosrun sisyph_slam tasty_test.py
+	srun tf static_transform_publisher 0 0 0 0 0 0 world map 100
+	rosrun tf static_transform_publisher 0 0 0 0 0 0 odom base_link 100
+	rosrun tf static_transform_publisher 0 0 0 0 0 0  base_link laser 100
+	rosrun gmapping slam_gmapping scan:=/scan _base_frame:=base_link _odom_frame:=odom _linearUpdate:=0.0 _angularUpdate:=0.0
 

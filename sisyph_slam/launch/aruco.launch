@@ -13,7 +13,7 @@
   <arg name="fiducial_len_override" default="" />
   <arg name="verbose" default="false"/>
 
-  <arg name="video_device" default="/dev/video2"/>
+  <arg name="video_device" default="/dev/video0"/>
 
   <include file="$(find sisyph_slam)/launch/usb_cam.launch" pass_all_args="true"/>
 
