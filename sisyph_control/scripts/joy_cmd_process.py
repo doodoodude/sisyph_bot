@@ -10,12 +10,12 @@ def clip(val: float, max_val: float):
 
 
 
-'''
+''' W
 0 ------ 1
 ----------
+---------- L
 ----------
-----------
-3 ------ 2
+3 ------ 2 R
 '''
 
 class joy_processor:
@@ -24,14 +24,16 @@ class joy_processor:
 
         self.pub = rospy.Publisher("/sisyph/wheel_cmd", Int8MultiArray, queue_size=100)
 
-        self.chassis_L = 0.168
-        self.chassis_W = 0.25
+        self.joy_deadzone = 0.12
+
+        self.chassis_L = 0.1925
+        self.chassis_W = 0.315
         self.chassis_dim_sum = self.chassis_L + self.chassis_W
         self.wheel_R = 0.1
-        self.max_vx = -1
-        self.max_vy = 1 
-        self.min_vx = -0.25
-        self.min_vy = 0.25
+        self.max_vx = 1
+        self.max_vy = -1 
+        self.min_vx = 0.1
+        self.min_vy = -0.1
         self.max_wz = 1.3
         self.max_wheel_U = (self.chassis_dim_sum * self.max_wz + sqrt(2)*self.max_vx/2 + sqrt(2)*self.max_vy/2)/self.wheel_R 
         self.max_wheel_cmd = 60
@@ -51,6 +53,11 @@ class joy_processor:
         self.w_z = self.max_wz*data.axes[3]
         self.v_x = self.max_vx*data.axes[1]
         self.v_y = self.max_vy*data.axes[0] 
+
+        if abs(self.v_x)>0.0: self.v_x -= self.joy_deadzone
+        if abs(self.v_y)>0.0: self.v_y -= self.joy_deadzone
+        self.v_x /= (1-self.joy_deadzone)
+        self.v_y /= (1-self.joy_deadzone)
 
         if data.axes[1]==0 and data.axes[0]==0:
             self.v_x = self.min_vx*data.axes[7]

@@ -1,9 +1,7 @@
 <launch>
-  <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
-    <!-- <param name="dev" type="string" value="/dev/input/js0" /> -->
+  <!-- <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
     <param name="deadzone" value="0.12" />
-  </node>
-  <!-- <node name="TestControlOneComputer17_06" pkg="sisyph_control" type="TestControlOneComputer17_06.py" output="screen"/> -->
+  </node> -->
   <node name="joy_cmd_process" pkg="sisyph_control" type="joy_cmd_process.py" output="screen"/>
   <node name="arduino_node" pkg="rosserial_python" type="serial_node.py" args="/dev/ttyUSB1" output="screen"/>
 </launch>
