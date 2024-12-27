@@ -16,6 +16,7 @@ on inspiron:
 
 on u102:
 	rviz
+	rosrun joy joy_node _deadzone:=0.12
 	rosrun uss_api observer.py
 	rosrun uss_api seq_csv_writer -f test
 	roslaunch sisyph_slam robot_aruco.launch

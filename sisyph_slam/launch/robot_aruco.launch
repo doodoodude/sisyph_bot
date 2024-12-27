@@ -17,7 +17,7 @@
 
   <include file="$(find sisyph_slam)/launch/usb_cam.launch" pass_all_args="true"/>
 
-  <node pkg="aruco_detect" name="aruco_detect"
+  <node pkg="aruco_detect" name="$(arg camera)_aruco_detect"
     type="aruco_detect" output="screen" respawn="false">
     <param name="image_transport" value="$(arg transport)"/>
     <param name="publish_images" value="true" />
@@ -33,7 +33,8 @@
     <remap from="camera_info" to="$(arg camera)/camera_info"/>
   </node>
 
-
+  <!-- <node name="$(arg camera)_robot_tf_pub" pkg="sisyph_slam" type="robot_tf_pub.py" output="screen"></node>  -->
+    
   <!-- <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
     <remap from="image" to="/fiducial_images"/>
     <param name="autosize" value="true" />
