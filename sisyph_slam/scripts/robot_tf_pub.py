@@ -25,7 +25,7 @@ tf_msg2.child_frame_id = "robot"
 tf_msg2.transform.rotation = Quaternion(*ident_quat)
 
 tf_robot_laser_msg = TransformStamped()
-tf_robot_laser_msg.header.frame_id = "world" 
+tf_robot_laser_msg.header.frame_id = "robot" 
 tf_robot_laser_msg.child_frame_id = "laser"  
 tf_robot_laser_msg.transform.rotation = Quaternion(*flipz_quat)
 
@@ -54,14 +54,14 @@ def fiducial_transforms_cb(fid_msg: FiducialTransformArray):
         tf_quat = get_quat_arr_from_tf_msg(fid_tf)
         tf_trans = get_trans_arr_from_tf_msg(fid_tf)
 
-        # if fid_tf.fiducial_id == 42: # world -> usb_cam
-        #     tf_quat1_inv = quaternion_inverse(tf_quat) #quaternion_multiply(correct_fid_quat, tf_quat) 
-        #     tf_trans1_inv = -rotate_vector_by_quat(tf_trans, tf_quat1_inv) 
+        if fid_tf.fiducial_id == 42: # world -> usb_cam
+            tf_quat1_inv = quaternion_inverse(tf_quat) #quaternion_multiply(correct_fid_quat, tf_quat) 
+            tf_trans1_inv = -rotate_vector_by_quat(tf_trans, tf_quat1_inv) 
 
-        #     tf_msg1.transform.rotation = Quaternion(*tf_quat1_inv)
-        #     tf_msg1.transform.translation.x = tf_trans1_inv[0]
-        #     tf_msg1.transform.translation.y = tf_trans1_inv[1]
-        #     tf_msg1.transform.translation.z = tf_trans1_inv[2]
+            tf_msg1.transform.rotation = Quaternion(*tf_quat1_inv)
+            tf_msg1.transform.translation.x = tf_trans1_inv[0]
+            tf_msg1.transform.translation.y = tf_trans1_inv[1]
+            tf_msg1.transform.translation.z = tf_trans1_inv[2]
             # tf_broadcaster.sendTransform(tf_msg1)
 
         # if fid_tf.fiducial_id == 46:   # usb_cam -> robot
@@ -75,8 +75,14 @@ def fiducial_transforms_cb(fid_msg: FiducialTransformArray):
             tf_quat1_inv = get_quat_arr_from_tf_msg(tf_msg1)
             tf_trans1_inv = get_trans_arr_from_tf_msg(tf_msg1)
 
-            tf_quat2 = quaternion_multiply(tf_quat1_inv, tf_quat2)
+            tf_quat2 = quaternion_multiply(tf_quat1_inv, tf_quat2) 
+            # tf_quat2 = quaternion_multiply(quaternion_multiply(tf_quat1_inv, tf_quat2),flipz_quat) # doing Z flip
+
+            tf_eul2_Z = euler_from_quaternion(tf_quat2)[2]
+            tf_quat2 = quaternion_about_axis(tf_eul2_Z, [0,0,1]) # using only rotation around Z
+
             tf_trans2 = rotate_vector_by_quat(tf_trans2, tf_quat1_inv) + tf_trans1_inv
+            tf_trans2[2] = 0.0 # set Z to zero
 
             tf_msg2.transform.rotation = Quaternion(*tf_quat2)
             tf_msg2.transform.translation.x = tf_trans2[0]
@@ -109,8 +115,7 @@ def fiducial_transforms_cb(fid_msg: FiducialTransformArray):
         #     tf_msg2.transform.translation.z = tf_trans2[2]            
         #     tf_broadcaster.sendTransform(tf_msg2)
 
-    # tf_quat2 = quaternion_multiply(tf_quat2, flipz_quat)
-    tf_broadcaster.sendTransform(tf_msg2)
+    tf_broadcaster.sendTransform(tf_robot_laser_msg)
 
 # Subscribe to the /fiducial_transforms topic
 fid_listener = rospy.Subscriber("/fiducial_transforms", FiducialTransformArray, fiducial_transforms_cb)

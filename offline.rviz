@@ -7,11 +7,9 @@ Panels:
         - /Global Options1
         - /Status1
         - /TF1
-        - /TF1/Status1
+        - /TF1/Frames1
         - /TF1/Tree1
-        - /TF1/Tree1/world1
-        - /TF1/Tree1/world1/robot1
-        - /LaserScan2
+        - /LaserScan1/Status1
       Splitter Ratio: 0.5
     Tree Height: 719
   - Class: rviz/Selection
@@ -63,11 +61,13 @@ Visualization Manager:
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         laser:
           Value: true
-        robot:
+        map:
           Value: true
+        robot:
+          Value: false
         world:
           Value: true
       Marker Alpha: 1
@@ -78,6 +78,8 @@ Visualization Manager:
       Show Names: true
       Tree:
         world:
+          map:
+            {}
           robot:
             laser:
               {}
@@ -115,12 +117,12 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: false
+      Enabled: true
       Name: Map
       Topic: /map
       Unreliable: false
       Use Timestamp: false
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -133,7 +135,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -148,12 +150,12 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: laser
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -177,7 +179,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.149002552032471
+      Distance: 6.77334451675415
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -193,9 +195,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.485398530960083
+      Pitch: 0.6897971034049988
       Target Frame: <Fixed Frame>
-      Yaw: 0.5622235536575317
+      Yaw: 6.219046592712402
     Saved: ~
 Window Geometry:
   Displays:
