@@ -15,7 +15,7 @@ on inspiron:
 	//rosrun urg_node urg_node _ip_address:=192.168.0.10 _angle_min:=-1 _angle_max:=1 
 
 on u102:
-	rviz
+	rviz -d ~/ros_ws/src/sisyph_bot/offline.rviz
 	rosrun joy joy_node _deadzone:=0.12
 	rosrun uss_api observer.py
 	rosrun uss_api seq_csv_writer -f test
