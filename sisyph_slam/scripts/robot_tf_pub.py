@@ -2,35 +2,11 @@
 import rospy
 import tf2_ros
 import numpy as np
-from geometry_msgs.msg import TransformStamped, Quaternion
+from geometry_msgs.msg import TransformStamped, Quaternion, Vector3
 from fiducial_msgs.msg import FiducialTransformArray, FiducialTransform
+from nav_msgs.msg import OccupancyGrid
 from tf.transformations import quaternion_from_euler, euler_from_quaternion, quaternion_about_axis, quaternion_inverse, quaternion_multiply, quaternion_conjugate
 # from sklearn.preprocessing import normalize
-
-rospy.init_node("robot_tf_pub")
-
-tf_broadcaster = tf2_ros.TransformBroadcaster()
-
-ident_quat = np.array([0, 0, 0, 1])
-flipz_quat = quaternion_about_axis(3.1414, (0,0,1))
-
-tf_msg1 = TransformStamped()
-tf_msg1.header.frame_id = "world" 
-tf_msg1.child_frame_id = "usb_cam" 
-tf_msg1.transform.rotation = Quaternion(*ident_quat)
-
-tf_msg2 = TransformStamped()
-tf_msg2.header.frame_id = "world" 
-tf_msg2.child_frame_id = "robot" 
-tf_msg2.transform.rotation = Quaternion(*ident_quat)
-
-tf_robot_laser_msg = TransformStamped()
-tf_robot_laser_msg.header.frame_id = "robot" 
-tf_robot_laser_msg.child_frame_id = "laser"  
-tf_robot_laser_msg.transform.rotation = Quaternion(*flipz_quat)
-
-
-correct_fid_quat = quaternion_from_euler(-3.1414,-3.1414,0)
 
 
 def rotate_vector_by_quat(_vect, _quat):
@@ -42,85 +18,158 @@ def get_trans_arr_from_tf_msg(_msg):
     return np.array([_msg.transform.translation.x, _msg.transform.translation.y, _msg.transform.translation.z, 0.0])
 
 
-def fiducial_transforms_cb(fid_msg: FiducialTransformArray):
+correct_fid_quat = quaternion_from_euler(-3.1414,-3.1414,0)
+ident_quat = np.array([0, 0, 0, 1])
+flipz_quat = quaternion_about_axis(3.1414, (0,0,1))
 
-    tf_robot_laser_msg.header.stamp = fid_msg.header.stamp
-    tf_msg1.header.stamp = fid_msg.header.stamp
-    tf_msg2.header.stamp = fid_msg.header.stamp
 
-    # NEED TO LAUNCH rosrun tf static_transform_publisher 0 0 0 0 0 0 world map 5000
 
-    for seq, fid_tf in enumerate(fid_msg.transforms):
-        tf_quat = get_quat_arr_from_tf_msg(fid_tf)
-        tf_trans = get_trans_arr_from_tf_msg(fid_tf)
+class SisyphStatePublisher:
 
-        if fid_tf.fiducial_id == 42: # world -> usb_cam
-            tf_quat1_inv = quaternion_inverse(tf_quat) #quaternion_multiply(correct_fid_quat, tf_quat) 
-            tf_trans1_inv = -rotate_vector_by_quat(tf_trans, tf_quat1_inv) 
+    def __init__(self, nh):
 
-            tf_msg1.transform.rotation = Quaternion(*tf_quat1_inv)
-            tf_msg1.transform.translation.x = tf_trans1_inv[0]
-            tf_msg1.transform.translation.y = tf_trans1_inv[1]
-            tf_msg1.transform.translation.z = tf_trans1_inv[2]
-            # tf_broadcaster.sendTransform(tf_msg1)
+        self.nh = nh
 
-        # if fid_tf.fiducial_id == 46:   # usb_cam -> robot
-        #     tf_msg2.transform = fid_tf.transform
-        #     tf_broadcaster.sendTransform(tf_msg2)
+        fid_listener = rospy.Subscriber("/fiducial_transforms", FiducialTransformArray, self.fiducial_transforms_cb)
+        map_waiter = rospy.Subscriber("/map", OccupancyGrid, self.map_waiter_cb)
 
-        if fid_tf.fiducial_id == 46:   # world -> robot
-            tf_quat2 = get_quat_arr_from_tf_msg(fid_tf)
-            tf_trans2 = get_trans_arr_from_tf_msg(fid_tf)
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster()
+        # static_tf_broadcaster = tf2_ros.StaticTransformBroadcaster()
 
-            tf_quat1_inv = get_quat_arr_from_tf_msg(tf_msg1)
-            tf_trans1_inv = get_trans_arr_from_tf_msg(tf_msg1)
+        self.tf_world_usbcam_msg = TransformStamped()
+        self.tf_world_usbcam_msg.header.frame_id = "world" 
+        self.tf_world_usbcam_msg.child_frame_id = "usb_cam" 
+        self.tf_world_usbcam_msg.transform.rotation = Quaternion(*ident_quat)
 
-            tf_quat2 = quaternion_multiply(tf_quat1_inv, tf_quat2) 
-            # tf_quat2 = quaternion_multiply(quaternion_multiply(tf_quat1_inv, tf_quat2),flipz_quat) # doing Z flip
+        self.tf_odom_robot_msg = TransformStamped()
+        self.tf_odom_robot_msg.header.frame_id = "odom" 
+        self.tf_odom_robot_msg.child_frame_id = "robot" 
+        self.tf_odom_robot_msg.transform.rotation = Quaternion(*ident_quat)
 
-            tf_eul2_Z = euler_from_quaternion(tf_quat2)[2]
-            tf_quat2 = quaternion_about_axis(tf_eul2_Z, [0,0,1]) # using only rotation around Z
+        self.tf_robot_laser_msg = TransformStamped()
+        self.tf_robot_laser_msg.header.frame_id = "robot" 
+        self.tf_robot_laser_msg.child_frame_id = "laser"  
+        self.tf_robot_laser_msg.transform.rotation = Quaternion(*ident_quat)
+        self.tf_robot_laser_msg.transform.translation.x = 0.3
 
-            tf_trans2 = rotate_vector_by_quat(tf_trans2, tf_quat1_inv) + tf_trans1_inv
-            tf_trans2[2] = 0.0 # set Z to zero
+        self.tf_world_map_init_msg = TransformStamped()
+        self.tf_world_map_init_msg.header.frame_id = "world" 
+        self.tf_world_map_init_msg.child_frame_id = "map"
+        
+        self.tf_map_odom_init_msg = TransformStamped()
+        self.tf_map_odom_init_msg.header.frame_id = "map" 
+        self.tf_map_odom_init_msg.child_frame_id = "odom"  
+        self.tf_map_odom_init_msg.transform.rotation = Quaternion(*ident_quat)
 
-            tf_msg2.transform.rotation = Quaternion(*tf_quat2)
-            tf_msg2.transform.translation.x = tf_trans2[0]
-            tf_msg2.transform.translation.y = tf_trans2[1]
-            tf_msg2.transform.translation.z = tf_trans2[2]            
-            tf_broadcaster.sendTransform(tf_msg2)
+        self.init_published = False
 
-        # if fid_tf.fiducial_id == 46: # odom -> usb_cam
-        #     tf_quat1_inv = quaternion_inverse(tf_quat) #quaternion_multiply(correct_fid_quat, tf_quat) 
-        #     tf_trans1_inv = -rotate_vector_by_quat(tf_trans, tf_quat1_inv) 
+        self.quat_world_map_init = np.array([0,0,0,1])
+        self.trans_world_map_init = np.array([0,0,0,0])
+        self.quat_world_map_init_inv = np.array([0,0,0,1])
+        self.trans_world_map_init_inv = np.array([0,0,0,0])
 
-        #     tf_msg1.transform.rotation = Quaternion(*tf_quat1_inv)
-        #     tf_msg1.transform.translation.x = tf_trans1_inv[0]
-        #     tf_msg1.transform.translation.y = tf_trans1_inv[1]
-        #     tf_msg1.transform.translation.z = tf_trans1_inv[2]
+        self.quat_usbcam_world_inv = np.array([0,0,0,1])
+        self.trans_usbcam_world_inv = np.array([0,0,0,0])
 
-        # if fid_tf.fiducial_id == 42:   # odom -> robot
-        #     tf_quat2 = get_quat_arr_from_tf_msg(fid_tf)
-        #     tf_trans2 = get_trans_arr_from_tf_msg(fid_tf)
+        self.start_time = rospy.Time.now().to_sec()
+        self.map_start_time = -1
 
-        #     tf_quat1_inv = get_quat_arr_from_tf_msg(tf_msg1)
-        #     tf_trans1_inv = get_trans_arr_from_tf_msg(tf_msg1)
 
-        #     tf_quat2 = quaternion_multiply(tf_quat1_inv, tf_quat2)
-        #     tf_trans2 = rotate_vector_by_quat(tf_trans2, tf_quat1_inv) + tf_trans1_inv
 
-        #     tf_msg2.transform.rotation = Quaternion(*tf_quat2)
-        #     tf_msg2.transform.translation.x = tf_trans2[0]
-        #     tf_msg2.transform.translation.y = tf_trans2[1]
-        #     tf_msg2.transform.translation.z = tf_trans2[2]            
-        #     tf_broadcaster.sendTransform(tf_msg2)
 
-    tf_broadcaster.sendTransform(tf_robot_laser_msg)
+    def fiducial_transforms_cb(self, fid_msg: FiducialTransformArray):
 
-# Subscribe to the /fiducial_transforms topic
-fid_listener = rospy.Subscriber("/fiducial_transforms", FiducialTransformArray, fiducial_transforms_cb)
+        dt_start = (rospy.Time.now().to_sec()-self.start_time)
+        dt_map = (rospy.Time.now().to_sec()-self.map_start_time)
 
-try:
-    rospy.spin()
-except KeyboardInterrupt:
-    pass
+        self.tf_odom_robot_msg.header.stamp = fid_msg.header.stamp
+
+        self.tf_world_map_init_msg.header.stamp = fid_msg.header.stamp
+        self.tf_map_odom_init_msg.header.stamp = fid_msg.header.stamp
+
+        self.tf_robot_laser_msg.header.stamp = fid_msg.header.stamp
+        self.tf_world_usbcam_msg.header.stamp = fid_msg.header.stamp
+
+        for seq, fid_tf in enumerate(fid_msg.transforms):
+            tf_quat = get_quat_arr_from_tf_msg(fid_tf)
+            tf_trans = get_trans_arr_from_tf_msg(fid_tf)
+
+            if fid_tf.fiducial_id == 42: # world -> usb_cam
+                self.quat_usbcam_world_inv = quaternion_inverse(tf_quat) 
+                self.trans_usbcam_world_inv = -rotate_vector_by_quat(tf_trans, self.quat_usbcam_world_inv) 
+
+                self.tf_world_usbcam_msg.transform.rotation = Quaternion(*self.quat_usbcam_world_inv)
+                self.tf_world_usbcam_msg.transform.translation.x = self.trans_usbcam_world_inv[0]
+                self.tf_world_usbcam_msg.transform.translation.y = self.trans_usbcam_world_inv[1]
+                self.tf_world_usbcam_msg.transform.translation.z = self.trans_usbcam_world_inv[2]
+
+            if fid_tf.fiducial_id == 46:   # world -> obot, world->map, map->odom, 
+                # quat_world_robot = quaternion_multiply(self.quat_usbcam_world_inv, tf_quat)
+                quat_world_robot = quaternion_multiply(
+                                    quaternion_multiply(self.quat_usbcam_world_inv, tf_quat),
+                                    flipz_quat) # doing Z flip
+                quat_world_robot = quaternion_about_axis(euler_from_quaternion(quat_world_robot)[2], 
+                                                         [0,0,1]) # using only rotation about Z
+
+                trans_world_robot = rotate_vector_by_quat(tf_trans, self.quat_usbcam_world_inv) + self.trans_usbcam_world_inv
+                trans_world_robot[2] = 0.0 # set Z to zero
+            
+                if not self.init_published:
+                    self.init_published = True
+
+                    self.quat_world_map_init = quat_world_robot.copy()
+                    self.trans_world_map_init = trans_world_robot.copy()
+
+                    self.tf_world_map_init_msg.transform.rotation = Quaternion(*self.quat_world_map_init)
+                    self.tf_world_map_init_msg.transform.translation.x = self.trans_world_map_init[0]
+                    self.tf_world_map_init_msg.transform.translation.y = self.trans_world_map_init[1]
+                    self.tf_world_map_init_msg.transform.translation.z = self.trans_world_map_init[2]    
+
+                    self.quat_world_map_init_inv = quaternion_inverse(self.quat_world_map_init) 
+                    self.trans_world_map_init_inv = -rotate_vector_by_quat(self.trans_world_map_init, self.quat_world_map_init_inv) 
+                    quat_odom_robot = ident_quat
+                    trans_odom_robot = np.zeros(4)
+
+                    rospy.loginfo("Sent static init TFs")
+                else:
+
+                    # quat_odom_robot = quaternion_multiply(self.quat_world_map_init_inv, quat_world_robot)
+                    # trans_odom_robot = rotate_vector_by_quat(trans_world_robot, self.quat_world_map_init_inv) + self.trans_world_map_init_inv
+                    quat_odom_robot = ident_quat
+                    trans_odom_robot = np.zeros(4)
+
+                self.tf_odom_robot_msg.transform.rotation = Quaternion(*quat_odom_robot) 
+                self.tf_odom_robot_msg.transform.translation.x = trans_odom_robot[0]
+                self.tf_odom_robot_msg.transform.translation.y = trans_odom_robot[1]
+                self.tf_odom_robot_msg.transform.translation.z = trans_odom_robot[2]
+
+                self.tf_broadcaster.sendTransform([
+                                                    self.tf_odom_robot_msg,
+                                                    self.tf_world_usbcam_msg, 
+                                                    self.tf_robot_laser_msg, 
+                                                    self.tf_world_map_init_msg, 
+                                                   ])
+                
+                if (dt_start<20 and not dt_map>10) or dt_map>10:
+                    self.tf_broadcaster.sendTransform(self.tf_map_odom_init_msg)
+
+            
+
+
+
+    def map_waiter_cb(self, map_msg: OccupancyGrid):
+        self.map_start_time = rospy.Time.now().to_sec()
+
+
+
+
+
+if __name__ == '__main__':
+
+    node_handler = rospy.init_node("sisyph_state_pub", anonymous=False)
+    reconstructor = SisyphStatePublisher(node_handler)
+
+    try:
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
