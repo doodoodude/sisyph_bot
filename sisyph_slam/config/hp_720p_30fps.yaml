@@ -1,0 +1,21 @@
+image_width: 1280
+image_height: 720
+camera_name: hp_cam
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [921.106994781746, 0.0, 657.7355163789965, 0.0, 923.5235089712978, 356.0494671059437, 0.0, 0.0, 1.0]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.06207858598411404, 0.09208569906142314, 0.0034792193410758095, 0.0044260833697103204, 0.0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [921.0708253828774, 0.0, 662.9575218591037, 0.0, 0.0, 925.2438063352645, 358.9121927344832, 0.0, 0.0, 0.0, 1.0, 0.0]
+
