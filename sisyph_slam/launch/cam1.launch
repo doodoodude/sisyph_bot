@@ -1,7 +1,7 @@
 <launch>
 
 <arg name="cam1_name" default="cam1"/>
-<arg name="cam1_dev" value="/dev/video4"/>
+<arg name="cam1_dev" value="/dev/video2"/>
 
 <group ns="aruco1">
   <node name="$(arg cam1_name)" pkg="usb_cam" type="usb_cam_node" output="screen" >

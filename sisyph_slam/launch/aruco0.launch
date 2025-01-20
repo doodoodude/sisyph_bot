@@ -28,7 +28,6 @@
     <remap from="camera/compressed"
         to="$(arg cam0_name)/$(arg image)/$(arg transport)"/>
     <remap from="camera_info" to="$(arg cam0_name)/camera_info"/>
-    <remap from="fiducial_images" to="aruco0/fiducial_images"/>
   </node>
 </group>
 
