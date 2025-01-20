@@ -1,0 +1,6 @@
+<launch>
+
+<include file="$(find sisyph_slam)/launch/cam0.launch" pass_all_args="true"/>
+<!-- <include file="$(find sisyph_slam)/launch/cam1.launch" pass_all_args="true"/> -->
+
+</launch>
