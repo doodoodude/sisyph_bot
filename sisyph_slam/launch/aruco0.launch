@@ -4,8 +4,8 @@
 
 <arg name="image" default="image_raw"/>
 <arg name="transport" default="compressed"/>
-<arg name="fiducial_len" default="0.202"/>
-<arg name="dictionary" default="10"/>  
+<arg name="fiducial_len" default="0.21"/>
+<arg name="dictionary" default="0"/>  
 <arg name="do_pose_estimation" default="true"/>
 <arg name="publish_images" default="false"/>
 <arg name="vis_msgs" default="false"/>
@@ -30,6 +30,5 @@
     <remap from="camera_info" to="$(arg cam0_name)/camera_info"/>
   </node>
 </group>
-
 
 </launch>

@@ -1,0 +1,57 @@
+!!python/object/new:dynamic_reconfigure.encoding.Config
+dictitems:
+  adaptiveThreshConstant: 7.0
+  adaptiveThreshWinSizeMax: 23
+  adaptiveThreshWinSizeMin: 3
+  adaptiveThreshWinSizeStep: 2
+  cornerRefinementMaxIterations: 10
+  cornerRefinementMinAccuracy: 0.01
+  cornerRefinementSubpix: true
+  cornerRefinementWinSize: 5
+  doCornerRefinement: true
+  errorCorrectionRate: 0.52
+  groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+    dictitems:
+      adaptiveThreshConstant: 7.0
+      adaptiveThreshWinSizeMax: 23
+      adaptiveThreshWinSizeMin: 3
+      adaptiveThreshWinSizeStep: 2
+      cornerRefinementMaxIterations: 10
+      cornerRefinementMinAccuracy: 0.01
+      cornerRefinementSubpix: true
+      cornerRefinementWinSize: 5
+      doCornerRefinement: true
+      errorCorrectionRate: 0.52
+      groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      id: 0
+      markerBorderBits: 1
+      maxErroneousBitsInBorderRate: 0.04
+      maxMarkerPerimeterRate: 1.0
+      minCornerDistanceRate: 0.04715880287748048
+      minDistanceToBorder: 3
+      minMarkerDistanceRate: 0.1
+      minMarkerPerimeterRate: 0.03
+      minOtsuStdDev: 0.36002215309575664
+      name: Default
+      parameters: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      parent: 0
+      perspectiveRemoveIgnoredMarginPerCell: 0.13
+      perspectiveRemovePixelPerCell: 8
+      polygonalApproxAccuracyRate: 0.01
+      state: true
+      type: ''
+    state: []
+  markerBorderBits: 1
+  maxErroneousBitsInBorderRate: 0.04
+  maxMarkerPerimeterRate: 1.0
+  minCornerDistanceRate: 0.04715880287748048
+  minDistanceToBorder: 3
+  minMarkerDistanceRate: 0.1
+  minMarkerPerimeterRate: 0.03
+  minOtsuStdDev: 0.36002215309575664
+  perspectiveRemoveIgnoredMarginPerCell: 0.13
+  perspectiveRemovePixelPerCell: 8
+  polygonalApproxAccuracyRate: 0.01
+state: []

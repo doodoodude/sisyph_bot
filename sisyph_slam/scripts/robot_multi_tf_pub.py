@@ -60,13 +60,12 @@ class SisyphStatePublisher:
             self.tf_world_map_init_msg[i_cam_].transform.rotation = Quaternion(*ident_quat)
 
 
-
-
         self.tf_robot_laser_msg = TransformStamped() # STATIC
         self.tf_robot_laser_msg.header.frame_id = "robot" 
         self.tf_robot_laser_msg.child_frame_id = "laser"  
         self.tf_robot_laser_msg.transform.rotation = Quaternion(*ident_quat)
-        self.tf_robot_laser_msg.transform.translation.x = 0.3
+        self.tf_robot_laser_msg.transform.translation.x = 0.2555
+        self.tf_robot_laser_msg.transform.translation.y = 0.078
         
         self.tf_map_odom_init_msg = TransformStamped() # STATIC
         self.tf_map_odom_init_msg.header.frame_id = "map" 
@@ -86,6 +85,10 @@ class SisyphStatePublisher:
 
         self.start_time = rospy.Time.now().to_sec()
         self.map_start_time = -1
+
+
+
+
 
 
 
@@ -140,7 +143,7 @@ class SisyphStatePublisher:
                     quat_odom_robot = ident_quat
                     trans_odom_robot = np.zeros(4)
 
-                    rospy.loginfo("Sent static init TFs")
+                    rospy.loginfo(f"Sent static init TFs: cam{cam_ind}")
                 else:
 
                     quat_odom_robot = quaternion_multiply(self.quat_world_map_init_inv[cam_ind], quat_world_robot)
@@ -153,6 +156,10 @@ class SisyphStatePublisher:
 
 
             
+
+
+
+
 
     def fid_tf0_cb(self, fid_msg: FiducialTransformArray):
 
@@ -168,13 +175,17 @@ class SisyphStatePublisher:
             if self.world_found[cam_ind]:
                 self.tf_broadcaster0.sendTransform([
                                                     self.tf_odom_robot_msg[cam_ind],
-                                                    # self.tf_world_usbcam_msg[cam_ind], 
+                                                    self.tf_world_usbcam_msg[cam_ind], 
                                                     self.tf_world_map_init_msg[cam_ind], 
                                                     self.tf_robot_laser_msg, 
                                                     ])
-                
+        
                 if (dt_start<20 and not dt_map>10) or dt_map>10:
                     self.tf_broadcaster0.sendTransform(self.tf_map_odom_init_msg)
+
+
+
+
 
 
     def fid_tf1_cb(self, fid_msg: FiducialTransformArray):
@@ -189,7 +200,7 @@ class SisyphStatePublisher:
                 self.tf_broadcaster1.sendTransform([
                                                     self.tf_odom_robot_msg[cam_ind],
                                                     self.tf_world_map_init_msg[cam_ind],
-                                                    # self.tf_world_usbcam_msg[cam_ind], 
+                                                    self.tf_world_usbcam_msg[cam_ind], 
                                                     ])
             
 
