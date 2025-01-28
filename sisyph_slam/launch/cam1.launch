@@ -1,10 +1,11 @@
 <launch>
 
 <arg name="cam1_name" default="cam1"/>
-<arg name="cam1_dev" value="/dev/video2"/>
+<!-- <arg name="cam1_dev" value="/dev/video0"/> -->
+<arg name="cam1_dev" value="/dev/v4l/by-id/usb-HP_HP_Webcam_3110-video-index0"/>
 
 <group ns="aruco1">
-  <node name="$(arg cam1_name)" pkg="usb_cam" type="usb_cam_node" output="screen" >
+  <node name="$(arg cam1_name)" pkg="usb_cam" type="usb_cam_node" output="screen" respawn="true">
     <param name="video_device" value="$(arg cam1_dev)"/>
     <param name="image_width" value="1280" />
     <param name="image_height" value="720" />
