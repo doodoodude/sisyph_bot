@@ -15,7 +15,7 @@
 
 <group ns="aruco0">
   <node pkg="aruco_detect" name="aruco_detect"
-    type="aruco_detect" output="screen" respawn="false">
+    type="aruco_detect" output="screen" respawn="true">
     <param name="image_transport" value="$(arg transport)"/>
     <param name="publish_images" value="$(arg publish_images)"/>
     <param name="fiducial_len" value="$(arg fiducial_len)"/>
