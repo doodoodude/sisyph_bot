@@ -1,0 +1,8 @@
+<launch>
+
+<include file="$(find sisyph_control)/launch/joy_control.launch" pass_all_args="true"/>
+
+<node name="uss_lidar" pkg="uss_api" type="us_lidar_sync" args="--usbcan-dev /dev/ttyUSB1" output="screen"/>
+
+
+</launch>
