@@ -1,0 +1,38 @@
+
+rosparam set use_sim_time false
+
+
+
+
+
+Run gmapping* + aruco + tfs + lidar:
+
+on inspiron:
+	//roscore
+	//roslaunch sisyph_control joy_control.launch
+	//rosrun uss_api uss_lidar_sync
+	roslaunch sisyph_control robot_uss.launch
+
+	//rosrun urg_node urg_node _ip_address:=192.168.0.10 _angle_min:=-1 _angle_max:=1 
+
+on u102:
+	//rviz -d ~/ros_ws/src/sisyph_bot/offline.rviz
+	//rosrun joy joy_node _deadzone:=0.12
+	//roslaunch sisyph_slam multi_cam.launch
+	//roslaunch sisyph_slam multi_aruco.launch
+
+	roslaunch sisyph_slam experiment.launch
+
+	rosbag record /aruco0/fiducial_transforms /aruco1/fiducial_transforms uss_stream scan uss_lidar_sync
+
+	rosrun uss_api observer.py
+
+	rosrun uss_api seq_csv_writer -f test
+
+
+
+	*rosrun gmapping slam_gmapping scan:=/corrected_scan _base_frame:=robot _odom_frame:=odom _linearUpdate:=0.01 _angularUpdate:=0.01 _map_update_interval:=0.5 _maxUrange:=2.0 _lstep:=0.05 _astep:=0.005 _lskip:=0 _minimumScore:=0.0 _srr:=0.01 _srt:=0.02 _str:=0.01 _stt:=0.02 _temporalUpdate:=-1 _xmin:=-4 _xmax:=4 _ymin:=-4 _ymax:=4 _transform_publish_period:=0.1 _occ_thresh:=0.4
+
+	//rosrun tf static_transform_publisher 0 0 0 0 0 0 world map 100
+	//rosrun tf static_transform_publisher 0 0 0 0 0 0 odom base_link 100
+	//rosrun tf static_transform_publisher 0 0 0 0 0 0  base_link laser 100
