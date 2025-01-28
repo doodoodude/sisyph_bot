@@ -106,15 +106,16 @@ class SisyphStatePublisher:
             tf_trans = get_trans_arr_from_tf_msg(fid_tf)
 
             if fid_tf.fiducial_id == self.fid_world: # world -> usb_cam
-                self.world_found[cam_ind] = True
+                if not self.world_found[cam_ind]:
+                    self.world_found[cam_ind] = True
 
-                self.quat_usbcam_world_inv[cam_ind] = quaternion_inverse(tf_quat) 
-                self.trans_usbcam_world_inv[cam_ind] = -rotate_vector_by_quat(tf_trans, self.quat_usbcam_world_inv[cam_ind]) 
+                    self.quat_usbcam_world_inv[cam_ind] = quaternion_inverse(tf_quat) 
+                    self.trans_usbcam_world_inv[cam_ind] = -rotate_vector_by_quat(tf_trans, self.quat_usbcam_world_inv[cam_ind]) 
 
-                self.tf_world_usbcam_msg[cam_ind].transform.rotation = Quaternion(*self.quat_usbcam_world_inv[cam_ind])
-                self.tf_world_usbcam_msg[cam_ind].transform.translation.x = self.trans_usbcam_world_inv[cam_ind][0]
-                self.tf_world_usbcam_msg[cam_ind].transform.translation.y = self.trans_usbcam_world_inv[cam_ind][1]
-                self.tf_world_usbcam_msg[cam_ind].transform.translation.z = self.trans_usbcam_world_inv[cam_ind][2]
+                    self.tf_world_usbcam_msg[cam_ind].transform.rotation = Quaternion(*self.quat_usbcam_world_inv[cam_ind])
+                    self.tf_world_usbcam_msg[cam_ind].transform.translation.x = self.trans_usbcam_world_inv[cam_ind][0]
+                    self.tf_world_usbcam_msg[cam_ind].transform.translation.y = self.trans_usbcam_world_inv[cam_ind][1]
+                    self.tf_world_usbcam_msg[cam_ind].transform.translation.z = self.trans_usbcam_world_inv[cam_ind][2]
 
             if fid_tf.fiducial_id == self.fid_robot and self.world_found[cam_ind]:   # world -> obot, world->map, map->odom, 
                 # quat_world_robot = quaternion_multiply(self.quat_usbcam_world_inv[cam_ind], tf_quat)
@@ -203,6 +204,24 @@ class SisyphStatePublisher:
                                                     self.tf_world_usbcam_msg[cam_ind], 
                                                     ])
             
+            # dt_start = (rospy.Time.now().to_sec()-self.start_time)
+            # dt_map = (rospy.Time.now().to_sec()-self.map_start_time)
+
+            # self.process_tf_msg(fid_msg, cam_ind)
+
+            # if self.world_found[cam_ind]:
+            #     self.tf_broadcaster0.sendTransform([
+            #                                         self.tf_odom_robot_msg[cam_ind],
+            #                                         self.tf_world_usbcam_msg[cam_ind], 
+            #                                         self.tf_world_map_init_msg[cam_ind], 
+            #                                         self.tf_robot_laser_msg, 
+            #                                         ])
+        
+            #     if (dt_start<20 and not dt_map>10) or dt_map>10:
+            #         self.tf_broadcaster0.sendTransform(self.tf_map_odom_init_msg)
+
+
+
 
 
     def map_waiter_cb(self, map_msg: OccupancyGrid):
