@@ -30,8 +30,8 @@ class SisyphStatePublisher:
 
         self.nh = nh
 
-        self.fid_robot = 46
-        self.fid_world = 42
+        self.fid_robot = 42
+        self.fid_world = 46
 
         self.no_map_timeout = 10
 
