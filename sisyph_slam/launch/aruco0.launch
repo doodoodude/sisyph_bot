@@ -1,17 +1,6 @@
 <launch>
 
-<arg name="cam0_name" default="cam0"/>
-
-<arg name="image" default="image_raw"/>
-<arg name="transport" default="compressed"/>
-<arg name="fiducial_len" default="0.21"/>
-<arg name="dictionary" default="0"/>  
-<arg name="do_pose_estimation" default="true"/>
 <arg name="publish_images" default="false"/>
-<arg name="vis_msgs" default="false"/>
-<arg name="ignore_fiducials" default="" />
-<arg name="fiducial_len_override" default="" />
-<arg name="verbose" default="false"/>
 
 <group ns="aruco0">
   <node pkg="aruco_detect" name="aruco_detect"
