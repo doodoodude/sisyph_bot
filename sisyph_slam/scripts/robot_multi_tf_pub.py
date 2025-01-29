@@ -66,8 +66,8 @@ class SisyphStatePublisher:
         self.tf_robot_laser_msg.header.frame_id = "robot" 
         self.tf_robot_laser_msg.child_frame_id = "laser"  
         self.tf_robot_laser_msg.transform.rotation = Quaternion(*ident_quat)
-        self.tf_robot_laser_msg.transform.translation.x = 0.2555
-        self.tf_robot_laser_msg.transform.translation.y = 0.078
+        self.tf_robot_laser_msg.transform.translation.x = 0.199
+        self.tf_robot_laser_msg.transform.translation.y = 0.073
         
         self.tf_map_odom_init_msg = TransformStamped() # STATIC
         self.tf_map_odom_init_msg.header.frame_id = "map" 
