@@ -30,8 +30,10 @@ class SisyphStatePublisher:
 
         self.nh = nh
 
-        self.fid_robot = 46
-        self.fid_world = 42
+        self.fid_robot = 42
+        self.fid_world = 46
+
+        self.no_map_timeout = 10
 
         fid_listener0 = rospy.Subscriber("/aruco0/fiducial_transforms", FiducialTransformArray, self.fid_tf0_cb)
         fid_listener1 = rospy.Subscriber("/aruco1/fiducial_transforms", FiducialTransformArray, self.fid_tf1_cb)
@@ -64,8 +66,8 @@ class SisyphStatePublisher:
         self.tf_robot_laser_msg.header.frame_id = "robot" 
         self.tf_robot_laser_msg.child_frame_id = "laser"  
         self.tf_robot_laser_msg.transform.rotation = Quaternion(*ident_quat)
-        self.tf_robot_laser_msg.transform.translation.x = 0.2555
-        self.tf_robot_laser_msg.transform.translation.y = 0.078
+        self.tf_robot_laser_msg.transform.translation.x = 0.199
+        self.tf_robot_laser_msg.transform.translation.y = 0.073
         
         self.tf_map_odom_init_msg = TransformStamped() # STATIC
         self.tf_map_odom_init_msg.header.frame_id = "map" 
@@ -84,9 +86,9 @@ class SisyphStatePublisher:
         self.trans_usbcam_world_inv = [np.array([0,0,0,0]),np.array([0,0,0,0])]
 
         self.start_time = rospy.Time.now().to_sec()
-        self.map_start_time = -1
+        self.map_got_time = rospy.Time.now().to_sec()-self.no_map_timeout-1
 
-
+        self.odom_pub_stopped = True
 
 
 
@@ -169,7 +171,7 @@ class SisyphStatePublisher:
         if len(fid_msg.transforms)>0 and fid_msg.header.frame_id == f"cam{cam_ind}":
 
             dt_start = (rospy.Time.now().to_sec()-self.start_time)
-            dt_map = (rospy.Time.now().to_sec()-self.map_start_time)
+            dt_map = (rospy.Time.now().to_sec()-self.map_got_time)
 
             self.process_tf_msg(fid_msg, cam_ind)
 
@@ -180,9 +182,21 @@ class SisyphStatePublisher:
                                                     self.tf_world_map_init_msg[cam_ind], 
                                                     self.tf_robot_laser_msg, 
                                                     ])
-        
-                if (dt_start<20 and not dt_map>10) or dt_map>10:
+                
+                maps_too_old = dt_map>self.no_map_timeout
+                starting = dt_start<self.no_map_timeout
+                odom_pub_cond = starting or maps_too_old
+
+                if odom_pub_cond:
                     self.tf_broadcaster0.sendTransform(self.tf_map_odom_init_msg)
+                    
+                    if self.odom_pub_stopped:
+                        self.odom_pub_stopped = False
+                        rospy.loginfo("Started sending map->odom frame")
+                else:
+                    if not self.odom_pub_stopped:
+                        self.odom_pub_stopped = True
+                        rospy.loginfo("Map is building! Stopped sending map->odom frame")
 
 
 
@@ -205,7 +219,7 @@ class SisyphStatePublisher:
                                                     ])
             
             # dt_start = (rospy.Time.now().to_sec()-self.start_time)
-            # dt_map = (rospy.Time.now().to_sec()-self.map_start_time)
+            # dt_map = (rospy.Time.now().to_sec()-self.map_got_time)
 
             # self.process_tf_msg(fid_msg, cam_ind)
 
@@ -225,7 +239,7 @@ class SisyphStatePublisher:
 
 
     def map_waiter_cb(self, map_msg: OccupancyGrid):
-        self.map_start_time = rospy.Time.now().to_sec()
+        self.map_got_time = rospy.Time.now().to_sec()
 
 
 

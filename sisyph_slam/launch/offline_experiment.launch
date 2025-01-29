@@ -14,10 +14,8 @@ type="scan_tf_sync.py" output="screen" respawn="true"></node>
   args="--display-config $(find sisyph_slam)/rviz/$(arg viz).rviz">
 </node>
 
-<node pkg="uss_api" name="uss_observer"
-type="observer.py" output="screen" respawn="false"></node>
+<!-- <node pkg="uss_api" name="uss_observer"
+type="observer.py" output="screen" respawn="false"></node> -->
 
-<node pkg="uss_api" name="csv_writer"
-type="seq_csv_writer" output="screen" args="-f test" respawn="false"></node>
 
 </launch>

@@ -5,13 +5,14 @@
 <arg name="image" default="image_raw"/>
 <arg name="transport" default="compressed"/>
 <arg name="fiducial_len" default="0.21"/>
-<arg name="dictionary" default="0"/>  
+<arg name="dictionary" default="10"/>  
 <arg name="do_pose_estimation" default="true"/>
-<arg name="publish_images" default="false"/>
 <arg name="vis_msgs" default="false"/>
 <arg name="ignore_fiducials" default="" />
 <arg name="fiducial_len_override" default="" />
 <arg name="verbose" default="false"/>
+
+<arg name="publish_images" default="false"/>
 
 <group ns="aruco1">
   <node pkg="aruco_detect" name="aruco_detect" 

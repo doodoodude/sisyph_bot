@@ -2,8 +2,6 @@
 
 <!-- <rosparam param="use_sim_time" subst_value="false"></rosparam> -->
 
-<arg name="viz" default="online"/>
-
 <include file="$(find sisyph_slam)/launch/multi_cam_aruco.launch" pass_all_args="true"/>
 
 <node pkg="sisyph_slam" name="robot_tf_pub"
@@ -11,6 +9,7 @@ type="robot_multi_tf_pub.py" output="screen" respawn="true"></node>
 <!-- <node pkg="sisyph_slam" name="scan_tf_sync"
 type="scan_tf_sync.py" output="screen" respawn="true"></node> -->
 
+<arg name="viz" default="online"/>
 <node pkg="rviz" name="rviz"
   type="rviz" output="screen" respawn="false"
   args="--display-config $(find sisyph_slam)/rviz/$(arg viz).rviz">
@@ -20,7 +19,7 @@ type="scan_tf_sync.py" output="screen" respawn="true"></node> -->
   <param name="deadzone" value="0.12" />
 </node>
 
-<node pkg="uss_api" name="uss_observer"
-type="observer.py" output="screen" respawn="false"></node>
+<!-- <node pkg="uss_api" name="uss_observer"
+type="observer.py" output="screen" respawn="false"></node> -->
 
 </launch>
