@@ -20,16 +20,13 @@ on u102:
 	//rosrun joy joy_node _deadzone:=0.12
 	//roslaunch sisyph_slam multi_cam.launch
 	//roslaunch sisyph_slam multi_aruco.launch
+	//rosrun uss_api observer.py
 
 	roslaunch sisyph_slam experiment.launch
 
 	rosbag record /aruco0/fiducial_transforms /aruco1/fiducial_transforms uss_stream scan uss_lidar_sync
 
-	rosrun uss_api observer.py
-
 	rosrun uss_api seq_csv_writer -f test
-
-
 
 	*rosrun gmapping slam_gmapping scan:=/corrected_scan _base_frame:=robot _odom_frame:=odom _linearUpdate:=0.01 _angularUpdate:=0.01 _map_update_interval:=0.5 _maxUrange:=2.0 _lstep:=0.05 _astep:=0.005 _lskip:=0 _minimumScore:=0.0 _srr:=0.01 _srt:=0.02 _str:=0.01 _stt:=0.02 _temporalUpdate:=-1 _xmin:=-4 _xmax:=4 _ymin:=-4 _ymax:=4 _transform_publish_period:=0.1 _occ_thresh:=0.4
 
