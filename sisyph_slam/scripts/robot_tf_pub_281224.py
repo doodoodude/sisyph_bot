@@ -5,12 +5,17 @@ import numpy as np
 from geometry_msgs.msg import TransformStamped, Quaternion, Vector3
 from fiducial_msgs.msg import FiducialTransformArray, FiducialTransform
 from nav_msgs.msg import OccupancyGrid
-from tf.transformations import quaternion_from_euler, euler_from_quaternion, quaternion_about_axis, quaternion_inverse, quaternion_multiply, quaternion_conjugate
+from tf.transformations import quaternion_conjugate as quat_conj
+from tf.transformations import quaternion_from_euler as euler_to_quat
+from tf.transformations import euler_from_quaternion as quat_to_euler
+from tf.transformations import quaternion_about_axis as quat_axis
+from tf.transformations import quaternion_inverse as quat_inv
+from tf.transformations import quaternion_multiply as quat_mult
 # from sklearn.preprocessing import normalize
 
 
-def rotate_vector_by_quat(_vect, _quat):
-    return quaternion_multiply(quaternion_multiply(_quat, _vect), quaternion_conjugate(_quat))
+def rot_by_quat(_vect, _quat):
+    return quat_mult(quat_mult(_quat, _vect), quat_conj(_quat))
 
 def get_quat_arr_from_tf_msg(_msg):
     return np.array([_msg.transform.rotation.x, _msg.transform.rotation.y, _msg.transform.rotation.z, _msg.transform.rotation.w])
@@ -18,9 +23,9 @@ def get_trans_arr_from_tf_msg(_msg):
     return np.array([_msg.transform.translation.x, _msg.transform.translation.y, _msg.transform.translation.z, 0.0])
 
 
-correct_fid_quat = quaternion_from_euler(-3.1414,-3.1414,0)
+correct_fid_quat = euler_to_quat(-3.1414,-3.1414,0)
 ident_quat = np.array([0, 0, 0, 1])
-flipz_quat = quaternion_about_axis(3.1414, (0,0,1))
+flipz_quat = quat_axis(3.1414, (0,0,1))
 
 
 
@@ -36,7 +41,7 @@ class SisyphStatePublisher:
         self.no_map_timeout = 10
         self.no_map = False
 
-        fid_listener0 = rospy.Subscriber("/fiducial_transforms", FiducialTransformArray, self.fid_tf0_cb)
+        fid_listener0 = rospy.Subscriber("/fiducial_transforms", FiducialTransformArray, self.fid_tf0_cb, queue_size=1)
         map_waiter = rospy.Subscriber("/map", OccupancyGrid, self.map_waiter_cb)
 
         self.tf_broadcaster0 = tf2_ros.TransformBroadcaster()
@@ -72,8 +77,8 @@ class SisyphStatePublisher:
         self.tf_map_odom_init_msg.child_frame_id = "odom"  
         self.tf_map_odom_init_msg.transform.rotation = Quaternion(*ident_quat)
 
-        self.init_published = [False, False]
-        self.world_found = [False,False]
+        self.init_published = False
+        self.world_found = False
 
         self.quat_world_map_init = np.array([0,0,0,1])
         self.trans_world_map_init = np.array([0,0,0,0])
@@ -106,26 +111,28 @@ class SisyphStatePublisher:
             tf_trans = get_trans_arr_from_tf_msg(fid_tf)
 
             if fid_tf.fiducial_id == self.fid_world: # world -> usb_cam
-                # if not self.world_found:
-                self.world_found = True
+                if not self.world_found:
+                    self.world_found = True
 
-                self.quat_usbcam_world_inv = quaternion_inverse(tf_quat) 
-                self.trans_usbcam_world_inv = -rotate_vector_by_quat(tf_trans, self.quat_usbcam_world_inv) 
+                    self.quat_usbcam_world_inv = quat_inv(tf_quat) 
+                    self.trans_usbcam_world_inv = -rot_by_quat(tf_trans, self.quat_usbcam_world_inv) 
 
-                self.tf_world_usbcam_msg.transform.rotation = Quaternion(*self.quat_usbcam_world_inv)
-                self.tf_world_usbcam_msg.transform.translation.x = self.trans_usbcam_world_inv[0]
-                self.tf_world_usbcam_msg.transform.translation.y = self.trans_usbcam_world_inv[1]
-                self.tf_world_usbcam_msg.transform.translation.z = self.trans_usbcam_world_inv[2]
+                    self.tf_world_usbcam_msg.transform.rotation = Quaternion(*self.quat_usbcam_world_inv)
+                    self.tf_world_usbcam_msg.transform.translation.x = self.trans_usbcam_world_inv[0]
+                    self.tf_world_usbcam_msg.transform.translation.y = self.trans_usbcam_world_inv[1]
+                    self.tf_world_usbcam_msg.transform.translation.z = self.trans_usbcam_world_inv[2]
+
+                    rospy.loginfo("Found usb_cam base tf")
 
             if fid_tf.fiducial_id == self.fid_robot and self.world_found:   # world -> obot, world->map, map->odom, 
                 # quat_world_robot = quaternion_multiply(self.quat_usbcam_world_inv, tf_quat)
-                quat_world_robot = quaternion_multiply(
-                                    quaternion_multiply(self.quat_usbcam_world_inv, tf_quat),
+                quat_world_robot = quat_mult(
+                                    quat_mult(self.quat_usbcam_world_inv, tf_quat),
                                     flipz_quat) # doing Z flip
-                quat_world_robot = quaternion_about_axis(euler_from_quaternion(quat_world_robot)[2], 
+                quat_world_robot = quat_axis(quat_to_euler(quat_world_robot)[2], 
                                                          [0,0,1]) # using only rotation about Z
 
-                trans_world_robot = rotate_vector_by_quat(tf_trans, self.quat_usbcam_world_inv) + self.trans_usbcam_world_inv
+                trans_world_robot = rot_by_quat(tf_trans, self.quat_usbcam_world_inv) + self.trans_usbcam_world_inv
                 trans_world_robot[2] = 0.0 # set Z to zero
             
                 if not self.init_published:
@@ -139,16 +146,16 @@ class SisyphStatePublisher:
                     self.tf_world_map_init_msg.transform.translation.y = self.trans_world_map_init[1]
                     self.tf_world_map_init_msg.transform.translation.z = self.trans_world_map_init[2]    
 
-                    self.quat_world_map_init_inv  = quaternion_inverse(self.quat_world_map_init ) 
-                    self.trans_world_map_init_inv  = -rotate_vector_by_quat(self.trans_world_map_init , self.quat_world_map_init_inv) 
+                    self.quat_world_map_init_inv  = quat_inv(self.quat_world_map_init ) 
+                    self.trans_world_map_init_inv  = -rot_by_quat(self.trans_world_map_init , self.quat_world_map_init_inv) 
                     quat_odom_robot = ident_quat
                     trans_odom_robot = np.zeros(4)
 
-                    rospy.loginfo(f"Sent static init TFs: usb_cam")
+                    rospy.loginfo(f"Found init odom tf")
                 else:
 
-                    quat_odom_robot = quaternion_multiply(self.quat_world_map_init_inv, quat_world_robot)
-                    trans_odom_robot = rotate_vector_by_quat(trans_world_robot, self.quat_world_map_init_inv) + self.trans_world_map_init_inv 
+                    quat_odom_robot = quat_mult(self.quat_world_map_init_inv, quat_world_robot)
+                    trans_odom_robot = rot_by_quat(trans_world_robot, self.quat_world_map_init_inv) + self.trans_world_map_init_inv 
 
                 self.tf_odom_robot_msg.transform.rotation = Quaternion(*quat_odom_robot) 
                 self.tf_odom_robot_msg.transform.translation.x = trans_odom_robot[0]
@@ -163,6 +170,9 @@ class SisyphStatePublisher:
 
 
     def fid_tf0_cb(self, fid_msg: FiducialTransformArray):
+
+        # rospy.loginfo(fid_msg.header.stamp.to_sec() - rospy.Time.now().to_sec())
+        # fid_msg.header.stamp = rospy.Time.now()
 
         if len(fid_msg.transforms)>0:
 
@@ -179,7 +189,7 @@ class SisyphStatePublisher:
                                                     self.tf_robot_laser_msg, 
                                                     ])
                 
-                maps_too_old = dt_map>self.no_map_timeout
+                maps_too_old = True #dt_map>self.no_map_timeout
                 starting = dt_start<self.no_map_timeout
                 odom_pub_cond = starting or maps_too_old or self.no_map
             
