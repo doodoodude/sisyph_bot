@@ -6,8 +6,6 @@
 
 <node pkg="sisyph_slam" name="robot_tf_pub"
 type="robot_multi_tf_pub.py" output="screen" respawn="true"></node>
-<!-- <node pkg="sisyph_slam" name="scan_tf_sync"
-type="scan_tf_sync.py" output="screen" respawn="true"></node> -->
 
 <arg name="viz" default="online"/>
 <node pkg="rviz" name="rviz"

@@ -4,7 +4,7 @@
 
 
 <node pkg="sisyph_slam" name="robot_tf_pub"
-type="old_robot_multi_tf_pub.py" output="screen" respawn="true"></node>
+type="robot_tf_pub_281224.py" output="screen" respawn="true"></node>
 <node pkg="sisyph_slam" name="scan_tf_sync"
 type="scan_tf_sync.py" output="screen" respawn="true"></node>
 
