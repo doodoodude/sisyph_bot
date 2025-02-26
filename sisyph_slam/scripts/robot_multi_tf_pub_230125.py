@@ -83,75 +83,69 @@ class SisyphStatePublisher:
         self.tf_mo_init_msg.child_frame_id = "odom"  
         self.tf_mo_init_msg.transform.rotation = Quaternion(*ident_q)
 
-        self.init_published = [False, False]
-        self.world_found = [False,False]
+        self.robot_found = np.array([False, False])
+        self.world_found = np.array([False,False])
 
         self.q_wm_init = [np.array([0,0,0,1]),np.array([0,0,0,1])]
         self.p_wm_init = [np.array([0,0,0,0]),np.array([0,0,0,0])]
         self.q_wm_init_inv = [np.array([0,0,0,1]),np.array([0,0,0,1])]
         self.p_wm_init_inv = [np.array([0,0,0,0]),np.array([0,0,0,0])]
 
-        self.q_cw_inv = [np.array([0,0,0,1]),np.array([0,0,0,1])]
-        self.p_cw_inv = [np.array([0,0,0,0]),np.array([0,0,0,0])]
+        self.q_cw_inv_init = [np.array([0,0,0,1]),np.array([0,0,0,1])]
+        self.p_cw_inv_init = [np.array([0,0,0,0]),np.array([0,0,0,0])]
 
-        self.q_or = [np.array([0,0,0,1]),np.array([0,0,0,1])]
-        self.p_or = [np.array([0,0,0,0]),np.array([0,0,0,0])]
+        self.q_wr = [np.array([0,0,0,1]),np.array([0,0,0,1])]
+        self.p_wr = [np.array([0,0,0,0]),np.array([0,0,0,0])]
 
-        self.tf_time_delta = [0.0, 0.0]
+        self.tf_last_time = [0.0, 0.0]
 
-        self.q_or_dt = [np.array([0,0,0,1]),np.array([0,0,0,1])]
-        self.p_or_dt = [np.array([0,0,0,0]),np.array([0,0,0,0])]
+        self.q_wr_dt = [np.array([0,0,0,1]),np.array([0,0,0,1])]
+        self.p_wr_dt = [np.array([0,0,0,0]),np.array([0,0,0,0])]
+        self.q_wr_dt_diff = np.array([0,0,0,1])
+        self.p_wr_dt_diff = np.array([0,0,0,0])
 
-        self.jumped = [False, False]
-
-        self.p_dt_norms = np.zeros(1500)
-        self.p_dt_time_deltas = np.zeros(1500)
-        self.p_dt_norms_ptr = 0
-
-        self.start_time = rospy.Time.now().to_sec()
-        self.map_got_time = rospy.Time.now().to_sec()-self.no_map_timeout-1
+        self.start_time = 0.0
+        self.map_got_time = 0.0
 
         self.odom_pub_stopped = True
 
+        self.pub_tfs_from = 0
 
 
 
 
 
 
+    def process_tf_msg(self, transforms: list, cam_ind: int, tf_time: float):
 
-    def process_tf_msg(self, fid_msg: FiducialTransformArray, cam_ind: int):
-
-        for fid_tf in fid_msg.transforms:
+        for fid_tf in transforms:
             tf_q = get_q_arr_from_tf_msg(fid_tf)
             tf_p = get_p_arr_from_tf_msg(fid_tf)
 
             if fid_tf.fiducial_id == self.fid_world: # world -> usb_cam
                 if not self.world_found[cam_ind]:
-
-                    self.start_time = rospy.Time.now().to_sec()
-
+                    if self.start_time==0.0: self.start_time = rospy.Time.now().to_sec()
                     rospy.loginfo(f"Found init cam{cam_ind} tf")
                     self.world_found[cam_ind] = True
 
-                    self.q_cw_inv[cam_ind] = inv_(tf_q) 
-                    self.p_cw_inv[cam_ind] = -rot_by_q(tf_p, self.q_cw_inv[cam_ind]) 
+                    self.q_cw_inv_init[cam_ind] = inv_(tf_q) 
+                    self.p_cw_inv_init[cam_ind] = -rot_by_q(tf_p, self.q_cw_inv_init[cam_ind]) 
 
-                    self.tf_wc_msg[cam_ind].transform.rotation = Quaternion(*self.q_cw_inv[cam_ind])
-                    self.tf_wc_msg[cam_ind].transform.translation.x = self.p_cw_inv[cam_ind][0]
-                    self.tf_wc_msg[cam_ind].transform.translation.y = self.p_cw_inv[cam_ind][1]
-                    self.tf_wc_msg[cam_ind].transform.translation.z = self.p_cw_inv[cam_ind][2]
+                    self.tf_wc_msg[cam_ind].transform.rotation = Quaternion(*self.q_cw_inv_init[cam_ind])
+                    self.tf_wc_msg[cam_ind].transform.translation.x = self.p_cw_inv_init[cam_ind][0]
+                    self.tf_wc_msg[cam_ind].transform.translation.y = self.p_cw_inv_init[cam_ind][1]
+                    self.tf_wc_msg[cam_ind].transform.translation.z = self.p_cw_inv_init[cam_ind][2]
 
             if fid_tf.fiducial_id == self.fid_robot and self.world_found[cam_ind]:   # world -> obot, world->map, map->odom, 
-                # q_wr = q_mult(self.q_cw_inv[cam_ind], tf_q)
-                q_wr = q_mult(q_mult(self.q_cw_inv[cam_ind], tf_q), flipz_q) # doing Z flip
+                # q_wr = q_mult(self.q_cw_inv_init[cam_ind], tf_q)
+                q_wr = q_mult(q_mult(self.q_cw_inv_init[cam_ind], tf_q), flipz_q) # doing Z flip
                 q_wr = q_axis(q_to_euler(q_wr)[2],[0,0,1]) # using only rotation about Z
 
-                p_wr = rot_by_q(tf_p, self.q_cw_inv[cam_ind]) + self.p_cw_inv[cam_ind]
+                p_wr = rot_by_q(tf_p, self.q_cw_inv_init[cam_ind]) + self.p_cw_inv_init[cam_ind]
                 p_wr[2] = 0.0 # set Z to zero
             
-                if not self.init_published[cam_ind]:
-                    self.init_published[cam_ind] = True
+                if not self.robot_found[cam_ind]:
+                    self.robot_found[cam_ind] = True
 
                     self.q_wm_init[cam_ind]  = q_wr.copy()
                     self.p_wm_init[cam_ind]  = p_wr.copy()
@@ -164,80 +158,117 @@ class SisyphStatePublisher:
                     self.q_wm_init_inv[cam_ind]  = inv_(self.q_wm_init[cam_ind]) 
                     self.p_wm_init_inv[cam_ind]  = -rot_by_q(self.p_wm_init[cam_ind], 
                                                              self.q_wm_init_inv[cam_ind]) 
-                    self.q_or[cam_ind] = ident_q
-                    self.p_or[cam_ind] = np.zeros(4)
+                    self.q_wr[cam_ind] = ident_q
+                    self.p_wr[cam_ind] = np.zeros(4)
+                    q_or = ident_q
+                    p_or = np.zeros(4)
 
+                    # if 
+                        # self.robot_found[cam_ind] = False
                     rospy.loginfo(f"Found init odom tf for cam{cam_ind}")
+
                 else:
-                    q_or = q_mult(self.q_wm_init_inv[cam_ind], q_wr)
-                    p_or = rot_by_q(p_wr, self.q_wm_init_inv[cam_ind]) + self.p_wm_init_inv[cam_ind] 
+                    self.q_wr_dt[cam_ind] = q_mult(inv_(self.q_wr[cam_ind]), q_wr)
+                    self.p_wr_dt[cam_ind] = rot_by_q(p_wr, inv_(self.q_wr[cam_ind])) - rot_by_q(self.p_wr[cam_ind], inv_(self.q_wr[cam_ind])) 
+                    self.q_wr[cam_ind] = q_wr
+                    self.p_wr[cam_ind] = p_wr
 
-                    self.q_or_dt[cam_ind] = q_mult(inv_(self.q_or[cam_ind]), q_or)
-                    self.p_or_dt[cam_ind] = rot_by_q(p_or, inv_(self.q_or[cam_ind])) - rot_by_q(self.p_or[cam_ind], inv_(self.q_or[cam_ind])) 
+                    q_or = q_mult(self.q_wm_init_inv[cam_ind], self.q_wr[cam_ind])
+                    p_or = rot_by_q(self.p_wr[cam_ind], self.q_wm_init_inv[cam_ind]) + self.p_wm_init_inv[cam_ind] 
 
-                    self.q_or[cam_ind] = q_or
-                    self.p_or[cam_ind] = p_or
+                self.tf_or_msg[cam_ind].transform.rotation = Quaternion(*q_or) 
+                self.tf_or_msg[cam_ind].transform.translation.x = p_or[0]
+                self.tf_or_msg[cam_ind].transform.translation.y = p_or[1]
+                self.tf_or_msg[cam_ind].transform.translation.z = p_or[2]
 
-                self.tf_or_msg[cam_ind].transform.rotation = Quaternion(*self.q_or[cam_ind]) 
-                self.tf_or_msg[cam_ind].transform.translation.x = self.p_or[cam_ind][0]
-                self.tf_or_msg[cam_ind].transform.translation.y = self.p_or[cam_ind][1]
-                self.tf_or_msg[cam_ind].transform.translation.z = self.p_or[cam_ind][2]
+                # print("quat:",[f"{q0-q1:.4f}" for q0, q1 in zip(self.q_wr_dt[0],self.q_wr_dt[1])])
+                # print("tran:",[f"{p0-p1:.4f}" for p0, p1 in zip(self.p_wr_dt[0],self.p_wr_dt[1])])
+                # print(f"cam0: {np.linalg.norm(self.p_wr_dt[0],1):.4f}, cam1: {np.linalg.norm(self.p_wr_dt[1],1):.4f}")
 
-                # print("quat:",[f"{q0-q1:.4f}" for q0, q1 in zip(self.q_or_dt[0],self.q_or_dt[1])])
-                # print("tran:",[f"{p0-p1:.4f}" for p0, p1 in zip(self.p_or_dt[0],self.p_or_dt[1])])
-                # print(f"cam{cam_ind}: {np.linalg.norm(self.p_or_dt[cam_ind],1):.4f}")
 
-                if self.p_dt_norms_ptr<1500 and self.p_dt_norms_ptr>-1:
-                    if cam_ind==0: 
-                        # if self.tf_time_delta[cam_ind]<0.1:
-                        self.p_dt_norms[self.p_dt_norms_ptr] = np.linalg.norm(self.p_or_dt[cam_ind],1)
-                        self.p_dt_time_deltas[self.p_dt_norms_ptr] = self.tf_time_delta[cam_ind]
-                        self.p_dt_norms_ptr += 1
+
+
+    def choose_cam(self, tf_time):
+        q0_diff= q_to_euler(self.q_wr_dt[0])[2]
+        q1_diff = q_to_euler(self.q_wr_dt[1])[2]
+
+        q0_cond = q0_diff<(np.pi/15)
+        q1_cond = q1_diff<(np.pi/15)
+        q01_cond = q0_diff<q1_diff
+
+        p0_cond = np.max(self.p_wr_dt[0])<0.02
+        p1_cond = np.max(self.p_wr_dt[1])<0.02
+        p01_cond = np.max(self.p_wr_dt[0])<np.max(self.p_wr_dt[1])
+
+        dt0_cond = (self.tf_last_time[0]-tf_time)<0.1
+        dt1_cond = (self.tf_last_time[1]-tf_time)<0.1
+
+        new_pub_tfs_from = 0
+        if dt0_cond: 
+            if q0_cond and p0_cond: new_pub_tfs_from = 0
+            else:
+                if q1_cond and p1_cond: new_pub_tfs_from = 1
                 else:
-                    if self.p_dt_norms_ptr>0:
-                        self.p_dt_norms_ptr = -1                  
-                        print(f"p_dt_norms: max={np.max(self.p_dt_norms):.4f}, min={np.min(self.p_dt_norms):.4f}, mean={np.mean(self.p_dt_norms):.4f} std={np.std(self.p_dt_norms):.4f}, median={np.median(self.p_dt_norms):.4f}")
+                    if q01_cond: new_pub_tfs_from = 0
+                    else: 
+                        if p01_cond: new_pub_tfs_from = 0
+                        else: new_pub_tfs_from = 1
+        else:
+            if q1_cond and p1_cond: new_pub_tfs_from = 1
+            else:
+                if q0_cond and p0_cond: new_pub_tfs_from = 0
+                else:
+                    if not q01_cond: new_pub_tfs_from = 1
+                    else: 
+                        if not p01_cond: new_pub_tfs_from = 1
+                        else: new_pub_tfs_from = 0     
+
+        if new_pub_tfs_from!=self.pub_tfs_from:
+            print(f"{self.pub_tfs_from}-->{new_pub_tfs_from},\t d0:{dt0_cond:1},\t d1:{dt1_cond:1},\t q0:{q0_cond:1},\t q1:{q1_cond:1},\t p0:{p0_cond:1},\t p1:{p1_cond:1},\t q01:{q01_cond:1},\t p01: {p01_cond:1}")
+        self.pub_tfs_from = new_pub_tfs_from
 
 
 
     def fid_tf_cb(self, fid_msg: FiducialTransformArray):
 
+        tf_time = fid_msg.header.stamp.to_sec()
+
         tfs_to_pub = []
 
-        if self.tf_rl_msg.header.stamp.to_sec()-fid_msg.header.stamp.to_sec() >= 1:
-            self.tf_rl_msg.header.stamp = fid_msg.header.stamp  
-            tfs_to_pub.append(self.tf_rl_msg)
-
         cam_ind = int(fid_msg.header.frame_id[-1])
-                
-        self.tf_time_delta[cam_ind] = fid_msg.header.stamp.to_sec()-self.tf_time_delta[cam_ind] 
-
-        self.tf_mo_init_msg.header.stamp = fid_msg.header.stamp
-
-        self.tf_wm_init_msg[cam_ind].header.stamp = fid_msg.header.stamp
-        self.tf_or_msg[cam_ind].header.stamp = fid_msg.header.stamp
-        self.tf_wc_msg[cam_ind].header.stamp = fid_msg.header.stamp        
+        # if self.world_found.all() and cam_ind==0 and self.robot_found.all(): return
 
         if len(fid_msg.transforms)>0:
 
-            dt_start = (rospy.Time.now().to_sec()-self.start_time)
-            dt_map = (rospy.Time.now().to_sec()-self.map_got_time)
-
-            self.process_tf_msg(fid_msg, cam_ind)
+            self.process_tf_msg(fid_msg.transforms, cam_ind, tf_time)
 
             if self.world_found[cam_ind]:
-                tfs_to_pub += [
-                                self.tf_or_msg[cam_ind],
-                                self.tf_wm_init_msg[cam_ind], 
-                                self.tf_wc_msg[cam_ind], 
-                                ]
+
+                if self.world_found.all(): self.choose_cam(tf_time) 
+                else: self.pub_tfs_from = cam_ind
+
+                self.tf_wc_msg[cam_ind].header.stamp = fid_msg.header.stamp        
+                tfs_to_pub.append(self.tf_wc_msg[cam_ind])                
                 
-                if cam_ind==0:
+                if cam_ind==self.pub_tfs_from:
+
+                    self.tf_or_msg[cam_ind].header.stamp = fid_msg.header.stamp
+                    tfs_to_pub.append(self.tf_or_msg[cam_ind])
+
+                    self.tf_wm_init_msg[cam_ind].header.stamp = fid_msg.header.stamp
+                    tfs_to_pub.append(self.tf_wm_init_msg[cam_ind])
+
+                    self.tf_rl_msg.header.stamp = fid_msg.header.stamp  
+                    tfs_to_pub.append(self.tf_rl_msg)
+
+                    dt_start = (rospy.Time.now().to_sec()-self.start_time)
+                    dt_map = (rospy.Time.now().to_sec()-self.map_got_time)
                     maps_too_old = True #dt_map>self.no_map_timeout
                     starting = dt_start<self.no_map_timeout
                     odom_pub_cond = starting or maps_too_old
 
                     if odom_pub_cond:
+                        self.tf_mo_init_msg.header.stamp = fid_msg.header.stamp
                         tfs_to_pub.append(self.tf_mo_init_msg)
                         
                         if self.odom_pub_stopped:
@@ -249,7 +280,7 @@ class SisyphStatePublisher:
                             rospy.loginfo("Map is building! Stopped sending map->odom frame")
 
                 self.tf_broadcaster0.sendTransform(tfs_to_pub)
-
+            self.tf_last_time[cam_ind] = tf_time
 
 
     def map_waiter_cb(self, map_msg: OccupancyGrid):
@@ -270,6 +301,3 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         pass
 
-    # plt.hist(robot_tf_publisher.p_dt_time_deltas, bins="auto")
-    plt.hist(robot_tf_publisher.p_dt_norms, bins="auto")    
-    plt.show()
