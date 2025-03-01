@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 
 
 def rot_by_q(_vect, _q):
-    return q_mult(q_mult(_q, _vect), q_conj(_q))
+    return q_mult(q_mult(_q, _vect), q_conj(_q))  #  _q^H(_p*_q)
 
 def get_q_arr_from_tf_msg(_msg):
     return np.array([_msg.transform.rotation.x, _msg.transform.rotation.y, _msg.transform.rotation.z, _msg.transform.rotation.w])
@@ -168,8 +168,8 @@ class SisyphStatePublisher:
                     rospy.loginfo(f"Found init odom tf for cam{cam_ind}")
 
                 else:
-                    self.q_wr_dt[cam_ind] = q_mult(inv_(self.q_wr[cam_ind]), q_wr)
-                    self.p_wr_dt[cam_ind] = rot_by_q(p_wr, inv_(self.q_wr[cam_ind])) - rot_by_q(self.p_wr[cam_ind], inv_(self.q_wr[cam_ind])) 
+                    # self.q_wr_dt[cam_ind] = q_mult(inv_(self.q_wr[cam_ind]), q_wr)
+                    # self.p_wr_dt[cam_ind] = rot_by_q(p_wr, inv_(self.q_wr[cam_ind])) - rot_by_q(self.p_wr[cam_ind], inv_(self.q_wr[cam_ind])) 
                     self.q_wr[cam_ind] = q_wr
                     self.p_wr[cam_ind] = p_wr
 
