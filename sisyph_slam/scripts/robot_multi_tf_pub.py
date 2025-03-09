@@ -100,21 +100,6 @@ class SisyphStatePublisher:
 
         self.qp_cw_inv_init = [(np.array([0,0,0,1]),np.array([0,0,0,0])),
                                (np.array([0,0,0,1]),np.array([0,0,0,0]))]
-        self.n_avg = [60,60]
-        self.qp_cw_inv_ang_x_mem = [np.zeros(self.n_avg[0]),np.zeros(self.n_avg[1])]   
-        self.qp_cw_inv_ang_y_mem = [np.zeros(self.n_avg[0]),np.zeros(self.n_avg[1])]                 
-        self.qp_cw_inv_ang_z_mem = [np.zeros(self.n_avg[0]),np.zeros(self.n_avg[1])]
-        self.qp_cw_inv_pos_x_mem = [np.zeros(self.n_avg[0]),np.zeros(self.n_avg[1])]
-        self.qp_cw_inv_pos_y_mem = [np.zeros(self.n_avg[0]),np.zeros(self.n_avg[1])]
-        self.qp_cw_inv_pos_z_mem = [np.zeros(self.n_avg[0]),np.zeros(self.n_avg[1])]        
-        self.qp_cw_inv_ang_x_avgs = np.array([0.0,0.0])
-        self.qp_cw_inv_ang_y_avgs = np.array([0.0,0.0])
-        self.qp_cw_inv_ang_z_avgs = np.array([0.0,0.0])
-        self.qp_cw_inv_pos_x_avgs = np.array([0.0,0.0])
-        self.qp_cw_inv_pos_y_avgs = np.array([0.0,0.0])
-        self.qp_cw_inv_pos_z_avgs = np.array([0.0,0.0])        
-        self.avg_complete = np.array([False,False])
-
         self.qp_wm_init = [(np.array([0,0,0,1]),np.array([0,0,0,0])),
                            (np.array([0,0,0,1]),np.array([0,0,0,0]))]
         self.qp_wm_init_inv = [(np.array([0,0,0,1]),np.array([0,0,0,0])),
@@ -150,48 +135,13 @@ class SisyphStatePublisher:
                 if not self.world_found[cam_]:
                     if self.start_time==0.0: self.start_time = rospy.Time.now().to_sec()
 
-                    if not self.avg_complete[cam_]:
-                        self.n_avg[cam_] -= 1
-                        if self.n_avg[cam_]>-1:
-                            self.qp_cw_inv_ang_x_mem[cam_][1:] = self.qp_cw_inv_ang_x_mem[cam_][:-1]; self.qp_cw_inv_ang_x_mem[cam_][0] = q_to_euler(tf_qp[0])[0]
-                            self.qp_cw_inv_ang_y_mem[cam_][1:] = self.qp_cw_inv_ang_y_mem[cam_][:-1]; self.qp_cw_inv_ang_y_mem[cam_][0] = q_to_euler(tf_qp[0])[1]
-                            self.qp_cw_inv_ang_z_mem[cam_][1:] = self.qp_cw_inv_ang_z_mem[cam_][:-1]; self.qp_cw_inv_ang_z_mem[cam_][0] = q_to_euler(tf_qp[0])[2]                       
-                            self.qp_cw_inv_pos_x_mem[cam_][1:] = self.qp_cw_inv_pos_x_mem[cam_][:-1]; self.qp_cw_inv_pos_x_mem[cam_][0] = tf_qp[1][0]
-                            self.qp_cw_inv_pos_y_mem[cam_][1:] = self.qp_cw_inv_pos_y_mem[cam_][:-1]; self.qp_cw_inv_pos_y_mem[cam_][0] = tf_qp[1][1]
-                            self.qp_cw_inv_pos_z_mem[cam_][1:] = self.qp_cw_inv_pos_y_mem[cam_][:-1]; self.qp_cw_inv_pos_z_mem[cam_][0] = tf_qp[1][2]    
+                    rospy.loginfo(f"Found world for cam{cam_}")
+                    self.world_found[cam_] = True
 
-                            self.qp_cw_inv_ang_x_avgs[cam_] = np.mean(self.qp_cw_inv_ang_x_mem[cam_])
-                            self.qp_cw_inv_ang_y_avgs[cam_] = np.mean(self.qp_cw_inv_ang_y_mem[cam_])
-                            self.qp_cw_inv_ang_z_avgs[cam_] = np.mean(self.qp_cw_inv_ang_z_mem[cam_])
-                            self.qp_cw_inv_pos_x_avgs[cam_] = np.mean(self.qp_cw_inv_pos_x_mem[cam_])
-                            self.qp_cw_inv_pos_y_avgs[cam_] = np.mean(self.qp_cw_inv_pos_y_mem[cam_])
-                            self.qp_cw_inv_pos_z_avgs[cam_] = np.mean(self.qp_cw_inv_pos_z_mem[cam_])
-
-                        else:
-                            self.avg_complete[cam_] = True   
-
-                            rospy.loginfo(f"Found world for cam{cam_}")
-                            self.world_found[cam_] = True
-
-                            with np.printoptions(formatter={'float': '{: 0.4f}'.format}): 
-                                print(f"cam{cam_}", self.qp_cw_inv_ang_x_mem[cam_])
-                                print(f"cam{cam_}", self.qp_cw_inv_ang_y_mem[cam_])
-                                print(f"cam{cam_}", self.qp_cw_inv_ang_z_mem[cam_])
-
-                            avgd_q = np.array(euler_to_q(self.qp_cw_inv_ang_x_avgs[cam_], 
-                                                         self.qp_cw_inv_ang_y_avgs[cam_], 
-                                                         self.qp_cw_inv_ang_z_avgs[cam_]))
-                            avgd_p = np.array([ self.qp_cw_inv_pos_x_avgs[cam_], 
-                                                self.qp_cw_inv_pos_y_avgs[cam_], 
-                                                self.qp_cw_inv_pos_z_avgs[cam_],
-                                                0.0])
-                            self.qp_cw_inv_init[cam_] = qp_inv((avgd_q, avgd_p)) # T_cw_inv = T_wc
-                            self.tf_wc_msg[cam_] = qp_to_tf_msg(self.qp_cw_inv_init[cam_], self.tf_wc_msg[cam_])                                                           
-
-                            if self.avg_complete.all(): del self.qp_cw_inv_ang_z_mem, self.qp_cw_inv_pos_x_mem, self.qp_cw_inv_pos_y_mem, self.qp_cw_inv_pos_z_mem
-
-
-            if fid_tf.fiducial_id == self.fid_robot and self.world_found[cam_]:   # world -> robot, world->map, map->odom, 
+                    self.qp_cw_inv_init[cam_] = qp_inv(tf_qp) # T_cw_inv = T_wc
+                    self.tf_wc_msg[cam_] = qp_to_tf_msg(self.qp_cw_inv_init[cam_], self.tf_wc_msg[cam_])                                                           
+            
+        if fid_tf.fiducial_id == self.fid_robot and self.world_found[cam_]:   # world -> robot, world->map, map->odom, 
                 q_wr, p_wr = qp_mult(self.qp_cw_inv_init[cam_], tf_qp)
                 q_wr = q_mult(q_wr, flipz_q)
                 q_wr = q_axis(q_to_euler(q_wr)[2],[0,0,1])  
@@ -211,12 +161,15 @@ class SisyphStatePublisher:
 
                     qp_or = qp_mult(self.qp_wm_init_inv[cam_], qp_wr)
 
-                    if self.robot_found.all() and self.world_found.all():  
+                    if self.robot_found[self.prior_cam] and self.world_found[self.prior_cam]:  
 
                         q_pred_err, p_pred_err = qp_relative(self.pred_qp[cam_], qp_or)
-                        angle_err, pos_err = abs(q_to_euler(q_pred_err)[2]), np.max(np.abs(p_pred_err))
+                        angle_err, pos_err = abs(q_to_euler(q_pred_err)[2]), np.linalg.norm(p_pred_err[:3])
                         self.pred_ok[cam_] = angle_err<0.01 and pos_err<0.05
                         self.lost_cam[cam_] = (tf_time-self.tf_last_time[0])>0.8
+
+                        if cam_== self.prior_cam: 
+                            self.pub_tfs_from = self.prior_cam if self.pred_ok[cam_] and not self.lost_cam[cam_] else -1
 
                         # if cam_==1: print(f"angle_err={angle_err:.5f}, pos_err={pos_err:.5f}")
 
@@ -229,8 +182,6 @@ class SisyphStatePublisher:
                     #             self.pub_tfs_from = -1
 
                     #     if self.lost_cam.any(): print(f"lost: cam0:{self.lost_cam[0]}, cam1:{self.lost_cam[1]}")
-
-                    self.pub_tfs_from = cam_
 
                     pred_step = qp_relative(self.qp_or[cam_], qp_or)
                     self.pred_qp[cam_] = qp_mult(qp_or, pred_step)
