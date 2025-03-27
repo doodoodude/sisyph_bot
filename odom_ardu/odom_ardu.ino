@@ -2,7 +2,8 @@
 #include <ros.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TwistStamped.h>
-// #include <std_msgs/Float32MultiArray.h>
+#include <tf/tf.h>
+#include <geometry_msgs/PoseStamped.h>
 
 #define BUFF_SIZE 4
 
@@ -15,8 +16,8 @@ void addToBuff(float * buff, float val)
   for(size_t i_=BUFF_SIZE-1; i_>=1; i_--)
   {    
     buff[i_] = buff[i_-1];    
-  } // сдвигаем элементы в массиве, начиная с последнего, и ЗАТИРАЯ последний элемент
-  buff[0] = val; // добавляем новый элемент в начало
+  } 
+  buff[0] = val; 
 }
 
 
@@ -60,20 +61,20 @@ float encoderRightSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0};
 float encoderCenterSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0};
 
 
-ros::NodeHandle nh; // объект для работы ROS 
-// nav_msgs::Odometry robot_odometry; // сообщение с одометрией
-geometry_msgs::TwistStamped robot_odometry; // сообщение с винтом (линейная скорость и угловая скорость в 3D) и штампом, содержащим время и название системы координат
-ros::Publisher pub_odometry("/odometry", &robot_odometry); // паблишер, для отправки сообщений одометрии на ПК
-const char frame_id[] = "robot"; // СК робота
-const char child_frame_id[] = "base_link"; 
+ros::NodeHandle nh; 
+nav_msgs::Odometry robot_odom; 
+ros::Publisher pub_odom("/sisyph/odom", &robot_odom); 
+float z_orient=0.0;
+const char frame_id[] = "odom";
+const char child_frame_id[] = "robot"; 
 
-float           wheelRadius = 0.0387;    // Радиус колес в метрах
-float distanceBetweenWheels = 0.16324;  // Расстояние между колесом с энкодером и центром одометра в метрах (актуально для всех трёх колёс)
-unsigned long      interval = 25;       // Интервал в миллисекундах 
+float R_w = 0.0387;    // Радиус колес в метрах
+float  d_RL = 0.16979;  // расстояние между правым и левым роликом
+unsigned long interval = 10;       
 float interval_fl; // интервал, но типа float, в секундах
-float speedLeft, speedRight, speedCenter; // текущие скорости колёс
+float w_L, w_R, w_C; 
 
-float ticks_to_rad = 2 * PI / (600*4); // коэффициент для перевода тиков энкодера в радианы
+float ticks_to_rad = 2 * PI / (600*4); 
 
 
 
@@ -83,17 +84,20 @@ float ticks_to_rad = 2 * PI / (600*4); // коэффициент для пере
 
 void setup() 
 {
-  nh.initNode(); // инициализируем ноду
-  nh.advertise(pub_odometry); // регистрируем publisher в ROS
-  interval_fl = (float)interval/1000; // вычисляем интервал типа float, мс --> сек
+  nh.initNode(); 
+  nh.advertise(pub_odom);  
+  interval_fl = (float)interval/1000; 
 
-  robot_odometry.header.frame_id = frame_id; // задаём название для СК публикуемой одометрии
-  // robot_odometry.child_frame_id = child_frame_id;
+	robot_odom.header.frame_id = frame_id; 
+  robot_odom.child_frame_id = child_frame_id;  
+	robot_odom.pose.pose.orientation = tf::createQuaternionFromYaw(0.0);
+	robot_odom.pose.pose.position.x = 0.0;
+	robot_odom.pose.pose.position.y = 0.0;
+	robot_odom.pose.pose.position.z = 0.0;
 
 }
 
-// read() -> int
-// int -> float (float32), double (float64)
+
 
 
 
@@ -104,30 +108,28 @@ void loop()
   if (time_now % interval == 0)  // если текущее время делится без остатка на заданный период 
   {
 
-    // Помещаем значение угла поворота в радианах в конечный буффер-очередь
-    addToBuff(encoderLeftSequence,  (float)encoderLeft.read() * ticks_to_rad); // сначала переводим тики во float, затем умножаем на коэффициент для перевода в радианы
+// read() -> int
+// int -> float (float32), double (float64)
+    addToBuff(encoderLeftSequence,  (float)encoderLeft.read() * ticks_to_rad); 
     addToBuff(encoderRightSequence, (float)encoderRight.read() * ticks_to_rad);
     addToBuff(encoderCenterSequence,(float)encoderCenter.read() * ticks_to_rad);
 
-    // Рассчитываются угловые скорости (рад/с)
-    speedLeft   = getFirstDerivative(encoderLeftSequence,   interval_fl); // используем функцию для вычисления более точной производной
-    speedRight  = getFirstDerivative(encoderRightSequence,  interval_fl);
-    speedCenter = getFirstDerivative(encoderCenterSequence, interval_fl);
-
-    // Расчитываем линейную и угловую скорости робота на плоскости, формула из статьи про кинематику мобильных роботов FTC 
-    robot_odometry.header.stamp = nh.now(); // обновляем штамп времени в сообщении одометрии
-    // robot_odometry.twist.linear.x = wheelRadius * (speedLeft + speedRight) / 2; // вычисляем линейную скорость робота вдоль оси X
-    // robot_odometry.twist.linear.y = wheelRadius * ((speedLeft - speedRight)/2 + speedCenter); // скорость вдоль Y
-    // robot_odometry.twist.angular.z = wheelRadius * (speedRight - speedLeft) / (2 * distanceBetweenWheels); // угловая скорость вокруг Z
+    w_L   = getFirstDerivative(encoderLeftSequence,   interval_fl); 
+    w_R  = getFirstDerivative(encoderRightSequence,  interval_fl);
+    w_C = getFirstDerivative(encoderCenterSequence, interval_fl);
+ 
+    robot_odom.header.stamp = nh.now(); // обновляем штамп времени в сообщении одометрии
+    robot_odom.twist.twist.linear.x = R_w * (w_L + w_R)/2; // вычисляем линейную скорость робота вдоль оси X
+    robot_odom.twist.twist.linear.y = -R_w * ((w_L - w_R)/2 + w_C); // скорость вдоль Y
+    robot_odom.twist.twist.angular.z = -R_w * (w_R - w_L) / (2 * d_RL); // угловая скорость вокруг Z
   
-    float speeda = wheelRadius * (speedLeft - speedRight)/2;
-    float speedb = wheelRadius * speedCenter;
-    robot_odometry.twist.linear.y = speeda;
-    robot_odometry.twist.linear.x = speedb;
-    robot_odometry.twist.linear.z = speeda - speedb;
+    // robot_odom.pose.pose.position.x += robot_odom.twist.twist.linear.x * interval_fl;
+    // robot_odom.pose.pose.position.y += robot_odom.twist.twist.linear.y * interval_fl;
+    // z_orient += robot_odom.twist.twist.angular.z * interval_fl;
+    // robot_odom.pose.pose.orientation = tf::createQuaternionFromYaw(z_orient);
 
-    pub_odometry.publish(&robot_odometry); // публикуем сообщение одометрии в топик
-    nh.spinOnce(); // НУЖНО для работы ROS 
+    pub_odom.publish(&robot_odom);
+    nh.spinOnce(); 
   }
 }
 
