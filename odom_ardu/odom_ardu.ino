@@ -62,8 +62,9 @@ float encoderCenterSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0};
 
 
 ros::NodeHandle nh; 
-nav_msgs::Odometry robot_odom; 
-ros::Publisher pub_odom("/sisyph/odom", &robot_odom); 
+geometry_msgs::TwistStamped robot_vel; 
+geometry_msgs::PoseStamped robot_pose; 
+ros::Publisher pub_pose("/sisyph/odom/pose", &robot_pose); 
 float z_orient=0.0;
 const char frame_id[] = "odom";
 const char child_frame_id[] = "robot"; 
@@ -85,15 +86,15 @@ float ticks_to_rad = 2 * PI / (600*4);
 void setup() 
 {
   nh.initNode(); 
-  nh.advertise(pub_odom);  
+  nh.advertise(pub_pose);  
   interval_fl = (float)interval/1000; 
 
-	robot_odom.header.frame_id = frame_id; 
-  robot_odom.child_frame_id = child_frame_id;  
-	robot_odom.pose.pose.orientation = tf::createQuaternionFromYaw(0.0);
-	robot_odom.pose.pose.position.x = 0.0;
-	robot_odom.pose.pose.position.y = 0.0;
-	robot_odom.pose.pose.position.z = 0.0;
+	robot_pose.header.frame_id = frame_id; 
+  // robot_pose.child_frame_id = child_frame_id;  
+	robot_pose.pose.orientation = tf::createQuaternionFromYaw(0.0);
+	robot_pose.pose.position.x = 0.0;
+	robot_pose.pose.position.y = 0.0;
+	robot_pose.pose.position.z = 0.0;
 
 }
 
@@ -118,17 +119,17 @@ void loop()
     w_R  = getFirstDerivative(encoderRightSequence,  interval_fl);
     w_C = getFirstDerivative(encoderCenterSequence, interval_fl);
  
-    robot_odom.header.stamp = nh.now(); // обновляем штамп времени в сообщении одометрии
-    robot_odom.twist.twist.linear.x = R_w * (w_L + w_R)/2; // вычисляем линейную скорость робота вдоль оси X
-    robot_odom.twist.twist.linear.y = -R_w * ((w_L - w_R)/2 + w_C); // скорость вдоль Y
-    robot_odom.twist.twist.angular.z = -R_w * (w_R - w_L) / (2 * d_RL); // угловая скорость вокруг Z
-  
-    // robot_odom.pose.pose.position.x += robot_odom.twist.twist.linear.x * interval_fl;
-    // robot_odom.pose.pose.position.y += robot_odom.twist.twist.linear.y * interval_fl;
-    // z_orient += robot_odom.twist.twist.angular.z * interval_fl;
-    // robot_odom.pose.pose.orientation = tf::createQuaternionFromYaw(z_orient);
+    robot_vel.twist.linear.x = R_w * (w_L + w_R)/2; 
+    robot_vel.twist.linear.y = -R_w * ((w_L - w_R)/2 + w_C);
+    robot_vel.twist.angular.z = -R_w * (w_R - w_L) / (2 * d_RL); 
 
-    pub_odom.publish(&robot_odom);
+    robot_pose.header.stamp = nh.now(); 
+    robot_pose.pose.position.x += robot_vel.twist.linear.x * interval_fl;
+    robot_pose.pose.position.y += robot_vel.twist.linear.y * interval_fl;
+    z_orient += robot_vel.twist.angular.z * interval_fl;
+    robot_pose.pose.orientation = tf::createQuaternionFromYaw(z_orient);
+
+    pub_pose.publish(&robot_pose);
     nh.spinOnce(); 
   }
 }
