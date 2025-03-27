@@ -8,15 +8,20 @@
 #include <EEPROM.h>
 
 
+
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
 bool bno_calibrated;
-uint16_t BNO055_SAMPLERATE_DELAY_MS = 10;
-double ACCEL_VEL_TRANSITION =  (double)(BNO055_SAMPLERATE_DELAY_MS) / 1000.0;
-double ACCEL_POS_TRANSITION = 0.5 * ACCEL_VEL_TRANSITION * ACCEL_VEL_TRANSITION;
-double ACCEL_SCALE = 1000;
-double DEG_2_RAD = 0.01745329251; 
-double POS_TRANS_THRESH_X = 0.006;
-double POS_TRANS_THRESH_Y = 0.006;
+uint16_t BNO_DT_MS = 10;
+float BNO_DT_SEC =  (float)(BNO_DT_MS) / 1000.0;
+float BNO_DT_SEC_2 = BNO_DT_SEC * BNO_DT_SEC;
+float ACCEL_SCALE = 1;
+float DEG_2_RAD = 0.01745329251; 
+float ACC_THRESH = 0.1;
+
+float accXBuff[2] = {0.0, 0.0};
+float accYBuff[2] = {0.0, 0.0};
+float posXBuff[2] = {0.0, 0.0};
+float posYBuff[2] = {0.0, 0.0};
 
 uint8_t bno_sys_status, bno_gyr_status, bno_acc_status, bno_mag_status;
 
@@ -52,9 +57,6 @@ void loop()
 }
 
 
-
-
-
 void initGPIO()
 {
 	pinMode(R_LED, OUTPUT);
@@ -64,7 +66,6 @@ void initGPIO()
 	digitalWrite(B_LED, HIGH);
 	digitalWrite(G_LED, HIGH);	
 }
-
 
 
 void initROS()
@@ -201,16 +202,24 @@ void calibLoop()
 void mainLoop()
 {
 	unsigned long time_now = millis(); 
-	if (time_now % BNO055_SAMPLERATE_DELAY_MS == 0) 
+	if (time_now % BNO_DT_MS == 0) 
 	{
 		sensors_event_t orientData , linAccData;
 		bno.getEvent(&orientData, Adafruit_BNO055::VECTOR_EULER);
 		bno.getEvent(&linAccData, Adafruit_BNO055::VECTOR_LINEARACCEL);
 
-		double x_trans = ACCEL_POS_TRANSITION * linAccData.acceleration.x * ACCEL_SCALE;
-		double y_trans = ACCEL_POS_TRANSITION * linAccData.acceleration.y * ACCEL_SCALE;
-		robot_pose.pose.position.x += shrinkVal(x_trans, POS_TRANS_THRESH_X);
-		robot_pose.pose.position.y += shrinkVal(y_trans, POS_TRANS_THRESH_Y);		
+		robot_pose.pose.position.x =verletPos(	posXBuff, 
+												accXBuff, 
+												linAccData.acceleration.x * ACCEL_SCALE,
+												BNO_DT_SEC_2, 
+												ACC_THRESH);
+		robot_pose.pose.position.y =verletPos(	posYBuff, 
+												accYBuff, 
+												linAccData.acceleration.y * ACCEL_SCALE,
+												BNO_DT_SEC_2, 
+												ACC_THRESH);
+
+		robot_pose.header.stamp = nh.now();
 		robot_pose.pose.orientation = tf::createQuaternionFromYaw(orientData.orientation.roll * DEG_2_RAD);
 
 		pub_odometry.publish(&robot_pose); 
@@ -228,4 +237,16 @@ float shrinkVal(float val, float thresh)
   if(val > 0.0){ if(val < thresh){ val = 0.0; } }
   else if(val < 0.0){ if(val > -thresh){ val = 0.0; } }
   return val;
+}
+
+
+
+float verletPos(float * pos_buff, float * acc_buff, float new_acc, float dt_2, float shrink_thresh) 
+{
+	acc_buff[1] = acc_buff[0];
+	acc_buff[0] = shrinkVal(new_acc, shrink_thresh);			
+	float new_pos = 2*pos_buff[0] - pos_buff[1] + acc_buff[1]*dt_2;
+	pos_buff[1] = pos_buff[0];
+	pos_buff[0] = new_pos;
+	return new_pos;
 }
