@@ -4,8 +4,8 @@
   </node> -->
   <node name="joy_cmd_process" pkg="sisyph_control" type="joy_cmd_process.py" output="screen"/>
   <node name="ctrl_ardu" pkg="rosserial_python" type="serial_node.py" 
-  args="/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0" output="screen"/>
+  args="/dev/serial/by-path/pci-0000:00:14.0-usb-0:2:1.0-port0" output="screen"/>
   <node name="odom_ardu" pkg="rosserial_python" type="serial_node.py" 
-  args="/dev/ttyUSB2" output="screen"/>
+  args="/dev/serial/by-path/pci-0000:00:14.0-usb-0:3:1.0-port0"  output="screen"/>
 
 </launch>
