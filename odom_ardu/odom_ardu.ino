@@ -1,9 +1,8 @@
 #include <Encoder.h>
 #include <ros.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/TwistStamped.h>
 #include <tf/tf.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <tf/transform_broadcaster.h>
+#include <geometry_msgs/TwistStamped.h>
 
 #define BUFF_SIZE 4
 
@@ -45,12 +44,12 @@ float shrinkVal(float val, float thresh)
 
 
 
-int    encoderLeftPinA = 21; // Пин A левого энкодера
-int    encoderLeftPinB = 20; // Пин B левого энкодера
-int   encoderRightPinA = 18; // Пин A правого энкодера
-int   encoderRightPinB = 19; // Пин B правого энкодера
-int  encoderCenterPinA = 3; // Пин A 3 энкодера
-int  encoderCenterPinB = 2; // Пин B 3 энкодера
+int    encoderLeftPinA = 21; 
+int    encoderLeftPinB = 20; 
+int   encoderRightPinA = 18; 
+int   encoderRightPinB = 19;
+int  encoderCenterPinA = 3; 
+int  encoderCenterPinB = 2; 
 
 Encoder     encoderLeft(encoderLeftPinA, encoderLeftPinB);
 Encoder   encoderRight(encoderRightPinA, encoderRightPinB);
@@ -63,16 +62,16 @@ float encoderCenterSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0};
 
 ros::NodeHandle nh; 
 geometry_msgs::TwistStamped robot_vel; 
-geometry_msgs::PoseStamped robot_pose; 
-ros::Publisher pub_pose("/sisyph/odom/pose", &robot_pose); 
+geometry_msgs::TransformStamped robot_tf;
+tf::TransformBroadcaster tf_pub;
 float z_orient=0.0;
 const char frame_id[] = "odom";
 const char child_frame_id[] = "robot"; 
 
-float R_w = 0.0387;    // Радиус колес в метрах
+float R_w = 0.0387;    // радиус колес в метрах
 float  d_RL = 0.16979;  // расстояние между правым и левым роликом
 unsigned long interval = 10;       
-float interval_fl; // интервал, но типа float, в секундах
+float interval_fl; 
 float w_L, w_R, w_C; 
 
 float ticks_to_rad = 2 * PI / (600*4); 
@@ -86,15 +85,15 @@ float ticks_to_rad = 2 * PI / (600*4);
 void setup() 
 {
   nh.initNode(); 
-  nh.advertise(pub_pose);  
+  tf_pub.init(nh); 
   interval_fl = (float)interval/1000; 
 
-	robot_pose.header.frame_id = frame_id; 
-  // robot_pose.child_frame_id = child_frame_id;  
-	robot_pose.pose.orientation = tf::createQuaternionFromYaw(0.0);
-	robot_pose.pose.position.x = 0.0;
-	robot_pose.pose.position.y = 0.0;
-	robot_pose.pose.position.z = 0.0;
+	robot_tf.header.frame_id = frame_id; 
+  robot_tf.child_frame_id = child_frame_id;  
+	robot_tf.transform.rotation = tf::createQuaternionFromYaw(0.0);
+	robot_tf.transform.translation.x = 0.0;
+	robot_tf.transform.translation.y = 0.0;
+	robot_tf.transform.translation.z = 0.0;
 
 }
 
@@ -123,13 +122,13 @@ void loop()
     robot_vel.twist.linear.y = -R_w * ((w_L - w_R)/2 + w_C);
     robot_vel.twist.angular.z = -R_w * (w_R - w_L) / (2 * d_RL); 
 
-    robot_pose.header.stamp = nh.now(); 
-    robot_pose.pose.position.x += robot_vel.twist.linear.x * interval_fl;
-    robot_pose.pose.position.y += robot_vel.twist.linear.y * interval_fl;
+    robot_tf.header.stamp = nh.now(); 
+    robot_tf.transform.translation.x += robot_vel.twist.linear.x * interval_fl;
+    robot_tf.transform.translation.y += robot_vel.twist.linear.y * interval_fl;
     z_orient += robot_vel.twist.angular.z * interval_fl;
-    robot_pose.pose.orientation = tf::createQuaternionFromYaw(z_orient);
+    robot_tf.transform.rotation = tf::createQuaternionFromYaw(z_orient);
 
-    pub_pose.publish(&robot_pose);
+    tf_pub.sendTransform(robot_tf);
     nh.spinOnce(); 
   }
 }
