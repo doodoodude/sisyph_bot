@@ -10,10 +10,10 @@ def clip(val: float, max_val: float):
 
 
 
-''' W
+''' W x 2
 0 ------ 1
 ----------
----------- L
+---------- L x 2
 ----------
 3 ------ 2 R
 '''
@@ -26,17 +26,17 @@ class joy_processor:
 
         self.joy_deadzone = 0.12
 
-        self.chassis_L = 0.1925
-        self.chassis_W = 0.315
+        self.chassis_L = 0.96
+        self.chassis_W = 0.15895
         self.chassis_dim_sum = self.chassis_L + self.chassis_W
         self.wheel_R = 0.1
         self.max_vx = 1
-        self.max_vy = -1 
-        self.min_vx = 0.1
-        self.min_vy = -0.1
+        self.max_vy = 1
+        self.min_vx = 0.4
+        self.min_vy = 0.4
         self.max_wz = 1.3
-        self.max_wheel_U = (self.chassis_dim_sum * self.max_wz + sqrt(2)*self.max_vx/2 + sqrt(2)*self.max_vy/2)/self.wheel_R 
-        self.max_wheel_cmd = 60
+        self.max_wheel_U = (self.chassis_dim_sum * abs(self.max_wz) + sqrt(2)*abs(self.max_vx)/2 + sqrt(2)*abs(self.max_vy)/2)/self.wheel_R 
+        self.max_wheel_cmd = 150
         print(f"self.max_wheel_U: {self.max_wheel_U}")
 
         self.w_z = 0.0
@@ -50,43 +50,31 @@ class joy_processor:
     def callback(self, data):
         # print(f"data.axes[0]: {data.axes[0]}, data.axes[1]: {data.axes[1]}, data.axes[2]: {data.axes[2]}, data.axes[3]: {data.axes[3]}, , data.axes[4]: {data.axes[4]}, , data.axes[5]: {data.axes[5]}")
 
-        self.w_z = self.max_wz*data.axes[3]
-        self.v_x = self.max_vx*data.axes[1]
-        self.v_y = self.max_vy*data.axes[0] 
+        self.w_z = data.axes[3]
+        self.v_x = data.axes[1]
+        self.v_y = data.axes[0]
 
-        if abs(self.v_x)>0.0: self.v_x -= self.joy_deadzone
-        if abs(self.v_y)>0.0: self.v_y -= self.joy_deadzone
-        self.v_x /= (1-self.joy_deadzone)
-        self.v_y /= (1-self.joy_deadzone)
 
         if data.axes[1]==0 and data.axes[0]==0:
             self.v_x = self.min_vx*data.axes[7]
-            self.v_y = self.min_vy*data.axes[6] 
-
-        # print((self.chassis_dim_sum * self.w_z + self.v_x + self.v_y)/self.wheel_R)
+            self.v_y = self.min_vy*data.axes[6]
 
         wheel_cmd_0 = (-self.chassis_dim_sum*self.w_z + self.v_x - self.v_y)/self.wheel_R
         wheel_cmd_1 = (self.chassis_dim_sum*self.w_z + self.v_x + self.v_y)/self.wheel_R
         wheel_cmd_2 = (self.chassis_dim_sum*self.w_z + self.v_x - self.v_y)/self.wheel_R
         wheel_cmd_3 = (-self.chassis_dim_sum*self.w_z + self.v_x + self.v_y)/self.wheel_R
 
-        # print(f"wheel_cmd_0: {wheel_cmd_0}, wheel_cmd_1: {wheel_cmd_1}, wheel_cmd_2: {wheel_cmd_2}, wheel_cmd_3: {wheel_cmd_3}")
-
         wheel_cmd_0 = (clip(wheel_cmd_0/self.max_wheel_U, 1))*self.max_wheel_cmd
         wheel_cmd_1 = (clip(wheel_cmd_1/self.max_wheel_U, 1))*self.max_wheel_cmd
         wheel_cmd_2 = (clip(wheel_cmd_2/self.max_wheel_U, 1))*self.max_wheel_cmd
         wheel_cmd_3 = (clip(wheel_cmd_3/self.max_wheel_U, 1))*self.max_wheel_cmd
 
-        # print(f"scaled wheel_cmd_0: {wheel_cmd_0}, scaled wheel_cmd_1: {wheel_cmd_1}, scaled wheel_cmd_2: {wheel_cmd_2}, scaled wheel_cmd_3: {wheel_cmd_3}")
-
-        # print(f"int8 wheel_cmd_0: {int8(wheel_cmd_0)}, int8 wheel_cmd_1: {int8(wheel_cmd_1)}, int8 wheel_cmd_2: {int8(wheel_cmd_2)}, int8 wheel_cmd_3: {int8(wheel_cmd_3)}")
-
         bot_cmd = Int8MultiArray()
         bot_cmd.data = [0,0,0,0,0]
-        bot_cmd.data[0] = int8(wheel_cmd_0)
-        bot_cmd.data[1] = int8(wheel_cmd_1)
-        bot_cmd.data[2] = int8(wheel_cmd_2)
-        bot_cmd.data[3] = int8(wheel_cmd_3)
+        bot_cmd.data[0] = int8(wheel_cmd_3) # wheel 3
+        bot_cmd.data[1] = int8(wheel_cmd_2) # wheel 2
+        bot_cmd.data[2] = int8(wheel_cmd_1) # wheel 1 
+        bot_cmd.data[3] = int8(wheel_cmd_0) # wheel 0
 
         bot_cmd.data[4] = 0
         if data.buttons[8]:
