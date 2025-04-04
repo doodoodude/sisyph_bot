@@ -3,10 +3,18 @@
 <!-- <rosparam param="use_sim_time" subst_value="false"></rosparam> -->
 
 
-<node pkg="sisyph_slam" name="robot_tf_pub"
+<!-- <node pkg="sisyph_slam" name="robot_tf_pub"
 type="robot_tf_pub_281224.py" output="screen" respawn="true"></node>
 <node pkg="sisyph_slam" name="scan_tf_sync"
+type="scan_tf_sync_281224.py" output="screen" respawn="true"></node> -->
+
+<node pkg="sisyph_slam" name="robot_tf_pub"
+type="robot_multi_tf_pub_230125.py" output="screen" respawn="true"></node>
+<node pkg="sisyph_slam" name="scan_tf_sync"
 type="scan_tf_sync.py" output="screen" respawn="true"></node>
+
+<!-- <node pkg="tf" type="static_transform_publisher" name="robot_laser_static_tf" args="0.2555 0.078 0 0 0 0 1 robot laser 40" /> -->
+
 
 <arg name="viz" default="offline"/>
 <node pkg="rviz" name="rviz"
