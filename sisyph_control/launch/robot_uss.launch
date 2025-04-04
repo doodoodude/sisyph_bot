@@ -2,6 +2,6 @@
 
 <include file="$(find sisyph_control)/launch/joy_control.launch" pass_all_args="true"/>
 
-<node name="uss_lidar" pkg="uss_api" type="uss_lidar_sync"  args="--usbcan-dev /dev/ttyUSB1" output="screen"/>
+<node name="uss_lidar" pkg="uss_api" type="uss_lidar_sync"  args="--usbcan-dev /dev/usb-FTDI_VScom_USB-CAN_Plus_DN0536AX-if00-port0" output="screen"/>
 
 </launch>
