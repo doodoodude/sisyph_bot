@@ -6,10 +6,6 @@
 
 #define BUFF_SIZE 4
 
-// Функция для сдвига элементов массива и добавления нового числа в начало (самое старое число пропадает).
-//
-// На вход идёт указатель на массив и новая величина, которую нужно добавить в массив.
-// Функция модифицирует массив, указатель на который передаётся в неё
 void addToBuff(float * buff, float val) 
 {
   for(size_t i_=BUFF_SIZE-1; i_>=1; i_--)
@@ -20,13 +16,6 @@ void addToBuff(float * buff, float val)
 }
 
 
-
-
-
-// Фунция для вычисления более точной производной на основе последних 4 значений угла поворота.
-//
-// sequence - массив с 4-мя последними значения величины, для которой вычисляем производную
-// dt - равный интервал времени между 4-мя значениями величины в массиве
 float getFirstDerivative(float * sequence, float dt) 
 {
   return (11*sequence[0]/6 - 3*sequence[1] + 3*sequence[2]/2 - sequence[3]/3)/dt;  // формула из википедии
@@ -69,7 +58,7 @@ const char frame_id[] = "odom";
 const char child_frame_id[] = "robot"; 
 
 float R_w = 0.0387;    // радиус колес в метрах
-float  d_RL = 0.16979;  // расстояние между правым и левым роликом
+float  d_RLwc = 0.16979;  // расстояние между боковым роликом и центром
 unsigned long interval = 10;       
 float interval_fl; 
 float w_L, w_R, w_C; 
@@ -114,18 +103,18 @@ void loop()
     addToBuff(encoderRightSequence, (float)encoderRight.read() * ticks_to_rad);
     addToBuff(encoderCenterSequence,(float)encoderCenter.read() * ticks_to_rad);
 
-    w_L   = getFirstDerivative(encoderLeftSequence,   interval_fl); 
-    w_R  = getFirstDerivative(encoderRightSequence,  interval_fl);
-    w_C = getFirstDerivative(encoderCenterSequence, interval_fl);
+    w_L   = encoderLeftSequence[0] - encoderLeftSequence[1]; //getFirstDerivative(encoderLeftSequence,   interval_fl); 
+    w_R  = encoderRightSequence[0] - encoderRightSequence[1]; //getFirstDerivative(encoderRightSequence,  interval_fl);
+    w_C = encoderCenterSequence[0] - encoderCenterSequence[1]; //getFirstDerivative(encoderCenterSequence, interval_fl);
  
     robot_vel.twist.linear.x = R_w * (w_L + w_R)/2; 
     robot_vel.twist.linear.y = -R_w * ((w_L - w_R)/2 + w_C);
-    robot_vel.twist.angular.z = -R_w * (w_R - w_L) / (2 * d_RL); 
+    robot_vel.twist.angular.z = -R_w * (w_R - w_L) / (2 * d_RLwc); 
+    z_orient += robot_vel.twist.angular.z; // * interval_fl;
 
     robot_tf.header.stamp = nh.now(); 
-    robot_tf.transform.translation.x += robot_vel.twist.linear.x * interval_fl;
-    robot_tf.transform.translation.y += robot_vel.twist.linear.y * interval_fl;
-    z_orient += robot_vel.twist.angular.z * interval_fl;
+    robot_tf.transform.translation.x += robot_vel.twist.linear.x*cos(z_orient) - robot_vel.twist.linear.y*sin(z_orient); // * interval_fl;
+    robot_tf.transform.translation.y += robot_vel.twist.linear.x*sin(z_orient) + robot_vel.twist.linear.y*cos(z_orient); // * interval_fl;
     robot_tf.transform.rotation = tf::createQuaternionFromYaw(z_orient);
 
     tf_pub.sendTransform(robot_tf);

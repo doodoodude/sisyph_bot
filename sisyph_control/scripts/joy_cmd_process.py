@@ -9,7 +9,7 @@ def clip(val: float, max_val: float):
     return val if abs(val)<max_val else max_val*sign(val)
 
 
-
+# robot schematic
 ''' W x 2
 0 ------ 1
 ----------
@@ -88,7 +88,7 @@ class joy_processor:
 
 
 if __name__ == '__main__':
-    rospy.init_node('TestControlOneComputer17_06', anonymous=True)
+    rospy.init_node("joy_cmd_process", anonymous=False)
     joy_proc = joy_processor()
 
     try:
