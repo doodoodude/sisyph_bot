@@ -12,7 +12,7 @@ class ScanTFSync:
 
     def __init__(self, nh):
         self.nh = nh
-
+        
         self.lidar_scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback, queue_size=1)
         self.lidar_correct_pub = rospy.Publisher("/corrected_scan", LaserScan, queue_size=1)
 
@@ -22,20 +22,25 @@ class ScanTFSync:
         self.lidar_msg = LaserScan()
 
 
+
     def scan_callback(self, lidar_msg: LaserScan):
 
+
         self.lidar_msg = lidar_msg
+        self.lidar_msg.time_increment = 0.0
+        self.lidar_msg.header.stamp = rospy.Time.now()
 
         # self.lidar_msg.angle_increment = 0.25*np.pi/180
-        self.lidar_msg.time_increment = 0.0 #lidar_msg.scan_time/1440
         # self.lidar_msg.range_min = lidar_msg.range_min/1000
         # self.lidar_msg.range_max = lidar_msg.range_max/1000
-        # self.lidar_msg.angle_max = self.scan_align_angle
-        # self.lidar_msg.angle_min = -lidar_msg.angle_min*2 + self.scan_align_angle 
+        # self.lidar_msg.angle_max = self.lidar_msg.angle_max*np.pi/180
+        # self.lidar_msg.angle_min = self.lidar_msg.angle_min*np.pi/180
         # self.lidar_msg.intensities = []
 
+
         try:
-            tf_ = self.tf_buffer.lookup_transform("laser","robot", rospy.Time(), rospy.Duration(1))
+            tf_ = self.tf_buffer.lookup_transform("robot","odom", rospy.Time(0), rospy.Duration(0.3))
+            if abs(tf_.header.stamp.to_sec()-self.lidar_msg.header.stamp.to_sec())>0.3: return
             self.lidar_msg.header.stamp = tf_.header.stamp
             self.lidar_correct_pub.publish(self.lidar_msg)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
