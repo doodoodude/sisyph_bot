@@ -52,7 +52,8 @@ float encoderCenterSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0};
 ros::NodeHandle nh; 
 geometry_msgs::TwistStamped robot_vel; 
 geometry_msgs::TransformStamped robot_tf;
-tf::TransformBroadcaster tf_pub;
+// tf::TransformBroadcaster tf_pub;
+ros::Publisher indi_tf_pub("/sisyph/odom/tf", &robot_tf); 
 float z_orient=0.0;
 const char frame_id[] = "odom";
 const char child_frame_id[] = "robot"; 
@@ -74,7 +75,8 @@ float ticks_to_rad = 2 * PI / (600*4);
 void setup() 
 {
   nh.initNode(); 
-  tf_pub.init(nh); 
+  // tf_pub.init(nh);
+  nh.advertise(indi_tf_pub);
   interval_fl = (float)interval/1000; 
 
 	robot_tf.header.frame_id = frame_id; 
@@ -108,8 +110,8 @@ void loop()
     w_C = encoderCenterSequence[0] - encoderCenterSequence[1]; //getFirstDerivative(encoderCenterSequence, interval_fl);
  
     robot_vel.twist.linear.x = R_w * (w_L + w_R)/2; 
-    robot_vel.twist.linear.y = -R_w * ((w_L - w_R)/2 + w_C);
-    robot_vel.twist.angular.z = -R_w * (w_R - w_L) / (2 * d_RLwc); 
+    robot_vel.twist.linear.y = -1*R_w * ((w_L - w_R)/2 + w_C);
+    robot_vel.twist.angular.z = -1*R_w * (w_R - w_L) / (2 * d_RLwc); 
     z_orient += robot_vel.twist.angular.z; // * interval_fl;
 
     robot_tf.header.stamp = nh.now(); 
@@ -117,7 +119,8 @@ void loop()
     robot_tf.transform.translation.y += robot_vel.twist.linear.x*sin(z_orient) + robot_vel.twist.linear.y*cos(z_orient); // * interval_fl;
     robot_tf.transform.rotation = tf::createQuaternionFromYaw(z_orient);
 
-    tf_pub.sendTransform(robot_tf);
+    // tf_pub.sendTransform(robot_tf);
+    indi_tf_pub.publish(&robot_tf);
     nh.spinOnce(); 
   }
 }
