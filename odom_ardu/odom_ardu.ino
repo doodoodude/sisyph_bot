@@ -39,7 +39,8 @@ ros::Publisher pos_pub("/sisyph/odom/pos", &robot_pos);
 
 float R_w = 0.0387;    // радиус колес в метрах
 float  d_RLwc = 0.16979;  // расстояние между боковым роликом и центром
-unsigned long interval = 5;       
+unsigned long interval = 10;      
+unsigned long time_now, time_last; 
 float interval_fl; 
 float w_L, w_R, w_C; 
 
@@ -55,6 +56,8 @@ void setup()
 {
   nh.initNode(); 
   nh.advertise(pos_pub);
+
+  time_last = millis();
   interval_fl = (float)interval/1000; 
 
 	robot_pos.vector.x = 0.0;
@@ -70,30 +73,31 @@ void setup()
 
 void loop() 
 {
-  unsigned long time_now = millis(); 
-  if (time_now % interval == 0)  
-  {
+	time_now = millis(); 
+	if (time_now - time_last >= interval)  
+	{
+		time_last = time_now;
 
-    enc_L_seq[1] = enc_L_seq[0];      enc_L_seq[0] = (float)enc_L.read() * ticks_to_rad;
-    enc_R_seq[1] = enc_R_seq[0];      enc_R_seq[0] = (float)enc_R.read() * ticks_to_rad;
-    enc_C_seq[1] = enc_C_seq[0];      enc_C_seq[0] = (float)enc_C.read() * ticks_to_rad;
+		robot_pos.header.stamp = nh.now(); 
+		enc_L_seq[1] = enc_L_seq[0];      enc_L_seq[0] = (float)enc_L.read() * ticks_to_rad;
+		enc_R_seq[1] = enc_R_seq[0];      enc_R_seq[0] = (float)enc_R.read() * ticks_to_rad;
+		enc_C_seq[1] = enc_C_seq[0];      enc_C_seq[0] = (float)enc_C.read() * ticks_to_rad;
 
-    w_L = enc_L_seq[0] - enc_L_seq[1]; 
-    w_R = enc_R_seq[0] - enc_R_seq[1]; 
-    w_C = enc_C_seq[0] - enc_C_seq[1]; 
- 
-    robot_dpos.x =    R_w * (w_L + w_R)/2; 
-    robot_dpos.y = -1*R_w * ((w_L - w_R)/2 + w_C);
-    robot_dpos.z = -1*R_w * (w_R - w_L) / (2 * d_RLwc); 
+		w_L = enc_L_seq[0] - enc_L_seq[1]; 
+		w_R = enc_R_seq[0] - enc_R_seq[1]; 
+		w_C = enc_C_seq[0] - enc_C_seq[1]; 
 
-    robot_pos.header.stamp = nh.now(); 
-    robot_pos.vector.z += robot_dpos.z;    
-    robot_pos.vector.x += robot_dpos.x*cos(robot_pos.vector.z) - robot_dpos.y*sin(robot_pos.vector.z); 
-    robot_pos.vector.y += robot_dpos.x*sin(robot_pos.vector.z) + robot_dpos.y*cos(robot_pos.vector.z); 
+		robot_dpos.x =    R_w * (w_L + w_R)/2; 
+		robot_dpos.y = -1*R_w * ((w_L - w_R)/2 + w_C);
+		robot_dpos.z = -1*R_w * (w_R - w_L) / (2 * d_RLwc); 
 
-    pos_pub.publish(&robot_pos);
-    nh.spinOnce(); 
-  }
+		robot_pos.vector.z += robot_dpos.z;    
+		robot_pos.vector.x += robot_dpos.x*cos(robot_pos.vector.z) - robot_dpos.y*sin(robot_pos.vector.z); 
+		robot_pos.vector.y += robot_dpos.x*sin(robot_pos.vector.z) + robot_dpos.y*cos(robot_pos.vector.z); 
+
+		pos_pub.publish(&robot_pos);
+		nh.spinOnce(); 
+	}
 }
 
 

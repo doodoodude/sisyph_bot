@@ -8,4 +8,7 @@
   <node name="odom_ardu" pkg="rosserial_python" type="serial_node.py" 
   args="/dev/serial/by-path/pci-0000:00:14.0-usb-0:3:1.0-port0"  output="screen"/>
 
+  <node name="robot_tf_pub" pkg="sisyph_slam" type="tfs_pub" output="screen"/>
+
+
 </launch>
