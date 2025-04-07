@@ -2,10 +2,12 @@
 
 <!-- <rosparam param="use_sim_time" subst_value="false"></rosparam> -->
 
-<include file="$(find sisyph_slam)/launch/multi_cam_aruco.launch" pass_all_args="true"/>
+<!-- <include file="$(find sisyph_slam)/launch/multi_cam_aruco.launch" pass_all_args="true"/> -->
 
 <node pkg="sisyph_slam" name="robot_tf_pub"
-type="robot_multi_tf_pub_no_world.py" output="screen" respawn="true"></node>
+type="tfs_pub" output="screen" respawn="true"></node>
+<node pkg="sisyph_slam" name="scan_tf_sync"
+type="scan_tf_sync.py" output="screen" respawn="true"></node>
 
 <arg name="viz" default="online"/>
 <node pkg="rviz" name="rviz"
@@ -13,11 +15,11 @@ type="robot_multi_tf_pub_no_world.py" output="screen" respawn="true"></node>
   args="--display-config $(find sisyph_slam)/rviz/$(arg viz).rviz">
 </node>
 
-<node respawn="true" pkg="joy" type="joy_node" name="joy_node">
+<node pkg="joy" type="joy_node" name="joy_node" respawn="true" >
   <param name="deadzone" value="0.12" />
 </node>
 
 <!-- robot center - laser offset: X=0.224 -->
-<node pkg="tf" type="static_transform_publisher" name="robot_laser_tf_pub" args="0.224 0.0 0 0 0 0 1 robot laser 50" />
+<!-- <node pkg="tf" type="static_transform_publisher" name="robot_laser_tf_pub" args="0.224 0.0 0 0 0 0 1 robot laser 50" /> -->
 
 </launch>

@@ -24,7 +24,8 @@ on u102:
 
 	roslaunch sisyph_slam experiment.launch
 
-	rosbag record /aruco0/fiducial_transforms /aruco1/fiducial_transforms uss_stream scan uss_lidar_sync
+	//rosbag record /aruco0/fiducial_transforms /aruco1/fiducial_transforms uss_stream scan uss_lidar_sync
+	rosbag record tf uss_stream scan uss_lidar_sync
 
 	rosrun uss_api seq_csv_writer -f test
 

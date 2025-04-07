@@ -27,8 +27,8 @@ class SisyphStatePublisher:
         self.fid_robot = fid_robot
         self.fid_world = fid_world
 
-        self.no_map_timeout = 12
-        self.use_own_odom = True
+        self.no_map_timeout = 600
+        self.use_own_odom = False
 
         fid_listener0 = rospy.Subscriber("/aruco0/fiducial_transforms", FiducialTransformArray, self.fid_tf_cb)
         # fid_listener1 = rospy.Subscriber("/aruco1/fiducial_transforms", FiducialTransformArray, self.fid_tf_cb)
