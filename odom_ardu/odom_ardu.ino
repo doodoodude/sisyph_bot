@@ -2,25 +2,8 @@
 #include <ros.h>
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
-#include <geometry_msgs/TwistStamped.h>
-
-#define BUFF_SIZE 4
-
-void addToBuff(float * buff, float val) 
-{
-  for(size_t i_=BUFF_SIZE-1; i_>=1; i_--)
-  {    
-    buff[i_] = buff[i_-1];    
-  } 
-  buff[0] = val; 
-}
-
-
-float getFirstDerivative(float * sequence, float dt) 
-{
-  return (11*sequence[0]/6 - 3*sequence[1] + 3*sequence[2]/2 - sequence[3]/3)/dt;  // формула из википедии
-}
-
+#include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 
 float shrinkVal(float val, float thresh)
@@ -33,34 +16,30 @@ float shrinkVal(float val, float thresh)
 
 
 
-int    encoderLeftPinA = 21; 
-int    encoderLeftPinB = 20; 
-int   encoderRightPinA = 18; 
-int   encoderRightPinB = 19;
-int  encoderCenterPinA = 3; 
-int  encoderCenterPinB = 2; 
+int enc_L_pin_A = 21; 
+int enc_L_pin_B = 20; 
+int enc_R_pin_A = 18; 
+int enc_R_pin_B = 19;
+int enc_C_pin_A = 3; 
+int enc_C_pin_B = 2; 
 
-Encoder     encoderLeft(encoderLeftPinA, encoderLeftPinB);
-Encoder   encoderRight(encoderRightPinA, encoderRightPinB);
-Encoder encoderCenter(encoderCenterPinA, encoderCenterPinB);
+Encoder   enc_L(enc_L_pin_A, enc_L_pin_B);
+Encoder   enc_R(enc_R_pin_A, enc_R_pin_B);
+Encoder   enc_C(enc_C_pin_A, enc_C_pin_B);
 
-float encoderLeftSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0}; // массив для хранения последних 4 значения показаний энкодеров, переведённых в радианы
-float encoderRightSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0}; 
-float encoderCenterSequence[BUFF_SIZE] = {0.0, 0.0, 0.0, 0.0};
+float enc_L_seq[2] = {0.0, 0.0}; // массив для хранения последних 2 значения показаний энкодеров, переведённых в радианы
+float enc_R_seq[2] = {0.0, 0.0}; 
+float enc_C_seq[2] = {0.0, 0.0};
 
 
 ros::NodeHandle nh; 
-geometry_msgs::TwistStamped robot_vel; 
-geometry_msgs::TransformStamped robot_tf;
-// tf::TransformBroadcaster tf_pub;
-ros::Publisher indi_tf_pub("/sisyph/odom/tf", &robot_tf); 
-float z_orient=0.0;
-const char frame_id[] = "odom";
-const char child_frame_id[] = "robot"; 
+geometry_msgs::Vector3 robot_dpos; 
+geometry_msgs::Vector3Stamped robot_pos;
+ros::Publisher pos_pub("/sisyph/odom/pos", &robot_pos); 
 
 float R_w = 0.0387;    // радиус колес в метрах
 float  d_RLwc = 0.16979;  // расстояние между боковым роликом и центром
-unsigned long interval = 10;       
+unsigned long interval = 5;       
 float interval_fl; 
 float w_L, w_R, w_C; 
 
@@ -75,16 +54,12 @@ float ticks_to_rad = 2 * PI / (600*4);
 void setup() 
 {
   nh.initNode(); 
-  // tf_pub.init(nh);
-  nh.advertise(indi_tf_pub);
+  nh.advertise(pos_pub);
   interval_fl = (float)interval/1000; 
 
-	robot_tf.header.frame_id = frame_id; 
-  robot_tf.child_frame_id = child_frame_id;  
-	robot_tf.transform.rotation = tf::createQuaternionFromYaw(0.0);
-	robot_tf.transform.translation.x = 0.0;
-	robot_tf.transform.translation.y = 0.0;
-	robot_tf.transform.translation.z = 0.0;
+	robot_pos.vector.x = 0.0;
+	robot_pos.vector.y = 0.0;
+	robot_pos.vector.z = 0.0;
 
 }
 
@@ -96,31 +71,27 @@ void setup()
 void loop() 
 {
   unsigned long time_now = millis(); 
-  if (time_now % interval == 0)  // если текущее время делится без остатка на заданный период 
+  if (time_now % interval == 0)  
   {
 
-// read() -> int
-// int -> float (float32), double (float64)
-    addToBuff(encoderLeftSequence,  (float)encoderLeft.read() * ticks_to_rad); 
-    addToBuff(encoderRightSequence, (float)encoderRight.read() * ticks_to_rad);
-    addToBuff(encoderCenterSequence,(float)encoderCenter.read() * ticks_to_rad);
+    enc_L_seq[1] = enc_L_seq[0];      enc_L_seq[0] = (float)enc_L.read() * ticks_to_rad;
+    enc_R_seq[1] = enc_R_seq[0];      enc_R_seq[0] = (float)enc_R.read() * ticks_to_rad;
+    enc_C_seq[1] = enc_C_seq[0];      enc_C_seq[0] = (float)enc_C.read() * ticks_to_rad;
 
-    w_L   = encoderLeftSequence[0] - encoderLeftSequence[1]; //getFirstDerivative(encoderLeftSequence,   interval_fl); 
-    w_R  = encoderRightSequence[0] - encoderRightSequence[1]; //getFirstDerivative(encoderRightSequence,  interval_fl);
-    w_C = encoderCenterSequence[0] - encoderCenterSequence[1]; //getFirstDerivative(encoderCenterSequence, interval_fl);
+    w_L = enc_L_seq[0] - enc_L_seq[1]; 
+    w_R = enc_R_seq[0] - enc_R_seq[1]; 
+    w_C = enc_C_seq[0] - enc_C_seq[1]; 
  
-    robot_vel.twist.linear.x = R_w * (w_L + w_R)/2; 
-    robot_vel.twist.linear.y = -1*R_w * ((w_L - w_R)/2 + w_C);
-    robot_vel.twist.angular.z = -1*R_w * (w_R - w_L) / (2 * d_RLwc); 
-    z_orient += robot_vel.twist.angular.z; // * interval_fl;
+    robot_dpos.x =    R_w * (w_L + w_R)/2; 
+    robot_dpos.y = -1*R_w * ((w_L - w_R)/2 + w_C);
+    robot_dpos.z = -1*R_w * (w_R - w_L) / (2 * d_RLwc); 
 
-    robot_tf.header.stamp = nh.now(); 
-    robot_tf.transform.translation.x += robot_vel.twist.linear.x*cos(z_orient) - robot_vel.twist.linear.y*sin(z_orient); // * interval_fl;
-    robot_tf.transform.translation.y += robot_vel.twist.linear.x*sin(z_orient) + robot_vel.twist.linear.y*cos(z_orient); // * interval_fl;
-    robot_tf.transform.rotation = tf::createQuaternionFromYaw(z_orient);
+    robot_pos.header.stamp = nh.now(); 
+    robot_pos.vector.z += robot_dpos.z;    
+    robot_pos.vector.x += robot_dpos.x*cos(robot_pos.vector.z) - robot_dpos.y*sin(robot_pos.vector.z); 
+    robot_pos.vector.y += robot_dpos.x*sin(robot_pos.vector.z) + robot_dpos.y*cos(robot_pos.vector.z); 
 
-    // tf_pub.sendTransform(robot_tf);
-    indi_tf_pub.publish(&robot_tf);
+    pos_pub.publish(&robot_pos);
     nh.spinOnce(); 
   }
 }
