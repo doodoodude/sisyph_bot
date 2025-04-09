@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot name="sisyph">
+
+  <material name="gray">
+    <color rgba="0.5 0.5 0.5 0.7"/>
+  </material>
+
+  <link name="robot">
+    <visual>
+      <origin xyz="0.0 0.0 0.1585" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <box size="0.416 0.480 0.317"/>
+      </geometry>
+      <material name="gray"/>
+    </visual>
+  </link>
+</robot>
