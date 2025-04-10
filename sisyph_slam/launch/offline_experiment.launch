@@ -1,10 +1,9 @@
 <launch>
 
-<!-- <rosparam param="use_sim_time" subst_value="false"></rosparam> -->
-
+<param name="robot_description" textfile="$(find sisyph_description)/urdf/sisyph_simple.urdf"/>
 
 <node pkg="sisyph_slam" name="robot_tf_pub"
-type="robot_multi_tf_pub.py" output="screen" respawn="true"></node>
+type="tfs_pub" output="screen" respawn="true"></node>
 <node pkg="sisyph_slam" name="scan_tf_sync"
 type="scan_tf_sync.py" output="screen" respawn="true"></node>
 
@@ -13,9 +12,5 @@ type="scan_tf_sync.py" output="screen" respawn="true"></node>
   type="rviz" output="screen" respawn="false"
   args="--display-config $(find sisyph_slam)/rviz/$(arg viz).rviz">
 </node>
-
-<!-- <node pkg="uss_api" name="uss_observer"
-type="observer.py" output="screen" respawn="false"></node> -->
-
 
 </launch>
