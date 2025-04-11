@@ -32,11 +32,14 @@ class joy_processor:
         self.wheel_R = 0.1
         self.max_vx = 1
         self.max_vy = 1
-        self.min_vx = 0.4
-        self.min_vy = 0.4
+        self.min_vx = 0.5
+        self.min_vy = 0.5
         self.max_wz = 0.3
-        self.max_wheel_U = 0.7*(self.chassis_dim_sum * abs(self.max_wz) + sqrt(2)*abs(self.max_vx)/2 + sqrt(2)*abs(self.max_vy)/2)/self.wheel_R 
-        self.max_wheel_cmd = 150
+        self.joy_scale_x = 0.5
+        self.joy_scale_y = 0.75
+        self.joy_scale_w = 0.5
+        self.max_wheel_U = 1 # #0.7*(self.chassis_dim_sum * abs(self.max_wz) + sqrt(2)*abs(self.max_vx)/2 + sqrt(2)*abs(self.max_vy)/2)/self.wheel_R 
+        self.max_wheel_cmd = 60
         print(f"self.max_wheel_U: {self.max_wheel_U}")
 
         self.w_z = 0.0
@@ -50,10 +53,9 @@ class joy_processor:
     def callback(self, data):
         # print(f"data.axes[0]: {data.axes[0]}, data.axes[1]: {data.axes[1]}, data.axes[2]: {data.axes[2]}, data.axes[3]: {data.axes[3]}, , data.axes[4]: {data.axes[4]}, , data.axes[5]: {data.axes[5]}")
 
-        self.w_z = data.axes[3]
-        self.v_x = data.axes[1]
-        self.v_y = data.axes[0]
-
+        self.v_x = data.axes[1]*self.joy_scale_x
+        self.v_y = data.axes[0]*self.joy_scale_y
+        self.w_z = data.axes[3]*self.joy_scale_w
 
         if data.axes[1]==0 and data.axes[0]==0:
             self.v_x = self.min_vx*data.axes[7]
