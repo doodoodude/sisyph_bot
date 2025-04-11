@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         // ROS_INFO_STREAM("dt_time: "<<ros::Time::now().toSec()-msg->header.stamp.toSec()<<" max_time: "<<max_time);
 
         t_now = ros::Time::now(); 
-        if(msg->header.stamp<t_now){ t_now = msg->header.stamp; }
+        // if(msg->header.stamp<t_now){ t_now = msg->header.stamp; }
         full_tfs_msg.transforms[0].header.stamp = t_now;
         full_tfs_msg.transforms[0].transform.translation.x = msg->vector.x;
         full_tfs_msg.transforms[0].transform.translation.y = msg->vector.y;
