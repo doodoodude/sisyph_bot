@@ -34,8 +34,8 @@ class joy_processor:
         self.max_vy = 1
         self.min_vx = 0.4
         self.min_vy = 0.4
-        self.max_wz = 1.3
-        self.max_wheel_U = (self.chassis_dim_sum * abs(self.max_wz) + sqrt(2)*abs(self.max_vx)/2 + sqrt(2)*abs(self.max_vy)/2)/self.wheel_R 
+        self.max_wz = 0.3
+        self.max_wheel_U = 0.7*(self.chassis_dim_sum * abs(self.max_wz) + sqrt(2)*abs(self.max_vx)/2 + sqrt(2)*abs(self.max_vy)/2)/self.wheel_R 
         self.max_wheel_cmd = 150
         print(f"self.max_wheel_U: {self.max_wheel_U}")
 
