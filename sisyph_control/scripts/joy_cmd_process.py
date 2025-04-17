@@ -35,11 +35,11 @@ class joy_processor:
         self.min_vx = 0.5
         self.min_vy = 0.5
         self.max_wz = 0.3
-        self.joy_scale_x = 0.5
-        self.joy_scale_y = 0.75
-        self.joy_scale_w = 0.5
-        self.max_wheel_U = 1 # #0.7*(self.chassis_dim_sum * abs(self.max_wz) + sqrt(2)*abs(self.max_vx)/2 + sqrt(2)*abs(self.max_vy)/2)/self.wheel_R 
-        self.max_wheel_cmd = 60
+        self.joy_scale_x = 0.2
+        self.joy_scale_y = 0.2
+        self.joy_scale_w = 0.1
+        self.max_wheel_U = 2 # #0.7*(self.chassis_dim_sum * abs(self.max_wz) + sqrt(2)*abs(self.max_vx)/2 + sqrt(2)*abs(self.max_vy)/2)/self.wheel_R 
+        self.max_wheel_cmd = 50
         print(f"self.max_wheel_U: {self.max_wheel_U}")
 
         self.w_z = 0.0
