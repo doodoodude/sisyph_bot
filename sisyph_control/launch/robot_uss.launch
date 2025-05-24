@@ -1,7 +1,8 @@
 <launch>
 
-<include file="$(find sisyph_control)/launch/joy_control.launch" pass_all_args="true"/>
 
+<include file="$(find sisyph_control)/launch/joy_control.launch" pass_all_args="true"/> 
+<node name="odom_ardu" pkg="rosserial_python" type="serial_node.py" args="/dev/serial/by-path/pci-0000:00:14.0-usb-0:3:1.0-port0"/ output="screen"/>
 <node name="uss_lidar" pkg="uss_api" type="uss_lidar_sync"  args="--usbcan-dev /dev/usb-FTDI_VScom_USB-CAN_Plus_DN0536AX-if00-port0" output="screen"/>
 
 </launch>

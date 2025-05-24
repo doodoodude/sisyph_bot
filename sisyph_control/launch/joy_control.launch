@@ -1,13 +1,9 @@
 <launch>
-  <!-- <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
-    <param name="deadzone" value="0.12" />
-  </node> -->
+  <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
+    <param name="deadzone" value="0.15" />
+  </node>
   
   <node name="joy_cmd_process" pkg="sisyph_control" type="joy_cmd_process.py" output="screen"/>
-  <node name="ctrl_ardu" pkg="rosserial_python" type="serial_node.py" 
-  args="/dev/serial/by-path/pci-0000:00:14.0-usb-0:2:1.0-port0" output="screen"/>
-  <node name="odom_ardu" pkg="rosserial_python" type="serial_node.py" 
-  args="/dev/serial/by-path/pci-0000:00:14.0-usb-0:3:1.0-port0"  output="screen"/>
-
+  <node name="ctrl_ardu" pkg="rosserial_python" type="serial_node.py" args="/dev/serial/by-path/pci-0000:00:14.0-usb-0:2.4.3:1.0-port0" output="screen"/>
 
 </launch>
