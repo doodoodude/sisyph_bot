@@ -39,29 +39,37 @@ if __name__ == '__main__':
     chassis_dim_sum = chassis_L + chassis_W
     wheel_R = 0.1
     min_vx,min_vy = 0.01, 0.01
-    joy_scale_x, joy_scale_y, joy_scale_w = 1,1,1
+    joy_pow_x, joy_pow_y, joy_pow_w = 2,2,2
+    fast_mode = False
 
     max_vx, max_vy, max_wz = 1,1,1
     max_wheel_U = (chassis_dim_sum * abs(max_wz) + np.sqrt(2)*abs(max_vx)/2 + np.sqrt(2)*abs(max_vy)/2)/wheel_R 
     max_wheel_cmd = 50
+    max_fast_wheel_cmd = 100
 
     print(f"max_wheel_U: {max_wheel_U}")
 
 
     def callback(data):
+        global fast_mode
+
         # print(f"data.axes[0]: {data.axes[0]}, data.axes[1]: {data.axes[1]}, data.axes[2]: {data.axes[2]}, data.axes[3]: {data.axes[3]}, , data.axes[4]: {data.axes[4]}, , data.axes[5]: {data.axes[5]}")
+ 
+        fast_mode = True if data.buttons[6] and not fast_mode else False if data.buttons[6] and fast_mode else fast_mode
 
-        v_x = data.axes[1]*joy_scale_x
-        v_y = data.axes[0]*joy_scale_y
-        w_z = data.axes[3]*joy_scale_w
+        wheel_cmd_scale = max_fast_wheel_cmd if fast_mode else max_wheel_cmd
 
-        if data.axes[1]==0 and data.axes[0]==0:
-            v_x = min_vx*data.axes[7]
-            v_y = min_vy*data.axes[6]
+        v_x = abs(data.axes[1]**joy_pow_x)*np.sign(data.axes[1])
+        v_y = abs(data.axes[0]**joy_pow_y)*np.sign(data.axes[0])
+        w_z = abs(data.axes[3]**joy_pow_w)*np.sign(data.axes[3])
+
+        v_x = min_vx*data.axes[7] if data.axes[1]==0 else v_x
+        v_y = min_vy*data.axes[6] if  data.axes[0]==0 else v_y
 
         v_xy_cmd = clip_norm(np.array([v_x,v_y]))
         v_x, v_y = v_xy_cmd[0]*max_vx, v_xy_cmd[1]*max_vy
-        # print(v_xy_cmd)
+        w_z *= max_wz
+        # print(v_xy_cmd, w_z)
 
         wheel_cmd_0 = (-chassis_dim_sum*w_z + v_x - v_y)/wheel_R
         wheel_cmd_1 = (chassis_dim_sum*w_z + v_x + v_y)/wheel_R
@@ -71,10 +79,10 @@ if __name__ == '__main__':
         # print(f"{wheel_cmd_0:.3f}, {wheel_cmd_1:.3f}, {wheel_cmd_2:.3f}, {wheel_cmd_3:.3f}")
         # print(f"{wheel_cmd_0/max_wheel_U:.3f}, {wheel_cmd_1/max_wheel_U:.3f}, {wheel_cmd_2/max_wheel_U:.3f}, {wheel_cmd_3/max_wheel_U:.3f}")
 
-        wheel_cmd_0 = (np.clip(wheel_cmd_0/max_wheel_U, -1, 1))*max_wheel_cmd
-        wheel_cmd_1 = (np.clip(wheel_cmd_1/max_wheel_U, -1, 1))*max_wheel_cmd
-        wheel_cmd_2 = (np.clip(wheel_cmd_2/max_wheel_U, -1, 1))*max_wheel_cmd
-        wheel_cmd_3 = (np.clip(wheel_cmd_3/max_wheel_U, -1, 1))*max_wheel_cmd
+        wheel_cmd_0 = (np.clip(wheel_cmd_0/max_wheel_U, -1, 1))*wheel_cmd_scale
+        wheel_cmd_1 = (np.clip(wheel_cmd_1/max_wheel_U, -1, 1))*wheel_cmd_scale
+        wheel_cmd_2 = (np.clip(wheel_cmd_2/max_wheel_U, -1, 1))*wheel_cmd_scale
+        wheel_cmd_3 = (np.clip(wheel_cmd_3/max_wheel_U, -1, 1))*wheel_cmd_scale
 
         # print(f"{wheel_cmd_0:.3f}, {wheel_cmd_1:.3f}, {wheel_cmd_2:.3f}, {wheel_cmd_3:.3f}")
 
